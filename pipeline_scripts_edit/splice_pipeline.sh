@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=sicelore
-#SBATCH --mem=500gb
+#SBATCH --mem=500G
 #SBATCH --cpus-per-task=12
 #SBATCH --ntasks=1
 #SBATCH --partition=bigmem
@@ -32,60 +32,247 @@ run_files=$5 ##location where all scripts are located
 genotype_info=$6
 pattern=$7
 nperm=$8
-#barcodes=$8 #full path to barcodes file 
+##barcodes=$8 #full path to barcodes file 
 
 echo $sample_name
 
-cd $fastqdir
-gunzip -c $fastq > "$sample_name".fastq
-cp "$sample_name".fastq "$workdir"/input_files/1.ONT_fastq
-
+##moved simple checks (i.e. directory permissions, etc.) to the beginning
+##so that basic mistakes are caught before complex computation
+{
 cd $workdir
-mkdir output_files
+} || {
+echo "invalid directory: $workdir"
+exit
+}
+
+if [ ! -d output_files ]
+then
+    {
+    mkdir output_files
+    echo "output_files folder created"
+    } || {
+    echo "unable to create output_files folder. Check permissions"
+    exit
+    }
+else
+    echo "output_files folder exists"
+fi
+    
 cd ./output_files
-mkdir logs
+if [ ! -d logs ]
+then
+    {
+    mkdir logs
+    echo "logs folder created"
+    } || {
+    echo "unable to create logs folder. Check permissions"
+    exit
+    }
+else
+    echo "output_files/logs folder exists"
+fi
 
-mkdir sicelore_outputs
+if [ ! -d sicelore_outputs ]
+then
+    {
+    mkdir sicelore_outputs
+    echo "sicelore_outputs folder created"
+    } || {
+    echo "unable to create sicelore_outputs folder. Check permissions"
+    exit
+    }
+else
+    echo "sicelore_outputs folder exists"
+fi
+
 cd ./sicelore_outputs
-mkdir temp
+if [ ! -d temp ]
+then
+    {
+    mkdir temp
+    echo "temp folder created"
+    } || {
+    echo "unable to create temp folder. Check permissions"
+    exit
+    }
+else
+    echo "sicelore_outputs/temp folder exists"
+fi
 
-#echo "scanning polyA" 
-#java -jar /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeReadScanner-0.5.jar -i "$workdir"/input_files/1.ONT_fastq/"$sample_name".fastq -o "$workdir"/output_files/sicelore_outputs
-#echo "polyA scan done" 
+if [ ! -d  "$workdir"/input_files/2.short_read_files/10X_parsing_files ]
+then
+    {
+    mkdir "$workdir"/input_files/2.short_read_files/10X_parsing_files
+    echo "10X_parsing_files folder created"
+    } || {
+    echo "unable to create 10X_parsing_files folder. Check permissions"
+    exit
+    }
+else
+    echo "10X_parsing_files folder exists"
+fi
 
-barcodes="$workdir"/input_files/2.short_read_files/barcodes.tsv
-bam="$workdir"/input_files/2.short_read_files/possorted_genome_bam.bam
-parsedobj="$workdir"/input_files/2.short_read_files/"$sample_name"_parsed_for_Nanopore.obj
+if [ -f "$workdir"/input_files/2.short_read_files/barcodes.tsv ]
+then
+    barcodes=$workdir/input_files/2.short_read_files/barcodes.tsv
+else
+    echo "file missing: folder 2.short_read_files needs an unzipped barcodes.tsv file"
+    exit
+fi
 
+if [ -f "$workdir"/input_files/2.short_read_files/possorted_genome_bam.bam ]
+then
+    bam="$workdir"/input_files/2.short_read_files/possorted_genome_bam.bam
+else
+    echo "file missing: folder 2.short_read_files needs a file possorted_genome_bam.bam"
+    exit
+fi
 
-#echo "parsing 10X object" 
- # ----- Parse for cell barcodes and UMIs ------------------
-#java -Xmx500g -jar /gpfs/commons/home/ahawkins/sicelore/Jar/IlluminaParser-1.0.jar --inFileIllumina $bam --tsv $barcodes --outFile $parsedobj --cellBCflag CB --umiFlag UB --geneFlag GN
+{
+cd $fastqdir
+} || {
+echo "invalid directory: $fastqdir"
+exit
+}
 
-polyAfastq=$workdir/output_files/sicelore_outputs/passed/"$sample_name"FWD.fastq ## make sure this includes workdir/passed/fastqnameFWD.fastq in name 
+##check if the fastq file already exists. If it does, don't unzip it again
+##and proceed to next step. This is useful, if the pipeline crashes later
+##and needs to be rerun
+if [ ! -f "$sample_name".fastq ]
+then
+    {
+    gunzip -c $fastq > "$sample_name".fastq
+    } || {
+    echo "invalid fastq: $fastq"
+    exit
+    }
+else
+    echo "fastq already exists in original folder. running analysis on existing fastq"
+fi
 
-## split fastq files 
-echo "splitting fastq files" 
-/gpfs/commons/home/pchamely/software/fastp -i $polyAfastq -Q -A --thread 1 --split_prefix_digits=3 --out1=sub.fastq --split=100
-echo "fastq files split" 
+if [ ! -f "$workdir"/input_files/1.ONT_fastq/"$sample_name".fastq ]
+then
+    {
+    cp "$sample_name".fastq "$workdir"/input_files/1.ONT_fastq
+    } || {
+    echo "unable to copy fastq file to: $workdir/input_files/1.ONT_fastq"
+    exit
+}
+else
+    echo "fastq already exists in destination folder. running analysis on existing fastq"
+fi
 
-jobs=$(seq -w 1 100)
+##polyA scanning, if completed will create a file polyADone.txt. This checks
+##if the file exists and skips the step if it does. That way, if the pipeline
+##is run multiple times, it can skip the polyA scanning step
+if [ ! -f "$workdir"/output_files/sicelore_outputs/polyADone.txt ]
+then
+    {
+    echo "scanning polyA"
+    #java -jar /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeReadScanner-0.5.jar -i "$workdir"/input_files/1.ONT_fastq/"$sample_name".fastq -o "$workdir"/output_files/sicelore_outputs
+    echo "polyA scan done" > "$workdir"/output_files/sicelore_outputs/polyADone.txt
+    } || {
+    echo "polyA scan failed"
+    exit
+    }
+else
+    echo "polyA scan previously completed. running analyis with existing files"
+fi
 
-#jobs=('0001' '0002' '0003' '0004' '0005' '0006' '0007' '0008' '0009' '0010' '0011' '0012' '0013' '0014' '0015' '0016' '0017' '0018' '0019' '0020')
+##10x parsing , if completed will create a file parsing10x.txt. This checks
+##if the file exists and skips the step if it does. That way, if the pipeline
+##is run multiple times, it can skip the 10x parsing step
+##split this out so that it runs after parallel to other tasks
 
-mkdir err_and_out
+if [ ! -f "$workdir"/input_files/2.short_read_files/"$sample_name"_parsed_for_Nanopore.obj ]
+then
+    echo "parsing 10X object"
+    parsedobj="$workdir"/input_files/2.short_read_files/"$sample_name"_parsed_for_Nanopore.obj
+    ## ----- Parse for cell barcodes and UMIs ------------------
+    ##set this as a separate job so other tasks can run simultaneously
+
+    cd "$workdir"/input_files/2.short_read_files/10X_parsing_files
+    cat > "$sample_name"_10X_parsing.sh <<EOF
+#!/bin/bash
+
+#SBATCH --job-name=10x_parsing
+#SBATCH --mem-per-cpu=75G
+#SBATCH --partition=pe2
+#SBATCH --output=stderror_%j.log
+#SBATCH --error=stderror_%j.log
+#SBATCH --ntasks=5
+
+java -Xmx500g -jar /gpfs/commons/home/ahawkins/sicelore/Jar/IlluminaParser-1.0.jar --inFileIllumina $bam --tsv $barcodes --outFile $parsedobj --cellBCflag CB --umiFlag UB --geneFlag GN
+
+EOF
+    
+    sbatch --job-name="$sample_name"_10X_parsing "$sample_name"_10X_parsing.sh
+
+else
+    echo "10x object parsing previously completed. running analyis with existing files"
+fi
+
+##fastq splitting
+##fastp outputs a file fastp.json. If this file exists in the folder,
+##it has already run, and can be skipped
+cd $workdir/output_files/sicelore_outputs
+
+if [ ! -f "$workdir"/output_files/sicelore_outputs/fastp.json ]
+then
+    if [ -f "$workdir"/output_files/sicelore_outputs/passed/"$sample_name"FWD.fastq ]
+    then
+        polyAfastq="$workdir"/output_files/sicelore_outputs/passed/"$sample_name"FWD.fastq ## make sure this includes workdir/passed/fastqnameFWD.fastq in name
+    else
+        echo "no passed sicelore outputs"
+        exit
+    fi
+
+    echo "splitting fastq files"
+    {
+    /gpfs/commons/home/pchamely/software/fastp -i $polyAfastq -Q -A --thread 1 --split_prefix_digits=3 --out1=sub.fastq --split=100
+    echo "fastq files split"
+    } || {
+    echo "fastq file splitting failed"
+    exit
+    }
+else
+    echo "fastq file previously split. running analysis on previous files"
+fi
+
+if [ ! -d  "$workdir"/output_files/sicelore_outputs/err_and_out ]
+then
+    {
+    mkdir err_and_out
+    echo "err_and_out folder created"
+    } || {
+    echo "unable to create err_and_out folder. Check permissions"
+    exit
+    }
+else
+    echo "err_and_out folder exists"
+fi
 
 sicelore_jobids=()
 
-# step 3: Alignment, UMI, and CB matching for all files 
+## step 3: Alignment, UMI, and CB matching for all files
+## perform this step only for non-empty files
+## do not repeat it, if it was completed previously
+jobs=$(seq -w 1 100)
+
 for i in ${jobs[@]};
 do
 
-cat > "$sample_name"_"$i"_sicelore_2.sh <<EOF
+if [ -f "$workdir"/output_files/sicelore_outputs/"$i".sub.fastq ]
+then
+    filename="$workdir"/output_files/sicelore_outputs/"$i".sub.fastq
+    size=$(stat -c %s $filename)
+    if [ $size>0 ]
+    then
+        cat > "$sample_name"_"$i"_sicelore_2.sh <<EOF
 #!/bin/bash
 
 #SBATCH --job-name=Sicelore_2
-#SBATCH --mem-per-cpu=75gb
+#SBATCH --mem-per-cpu=75G
 #SBATCH --partition=pe2
 #SBATCH --output=err_and_out/"$i"_stdout_%j.log
 #SBATCH --error=err_and_out/"$i"_stderror_%j.log
@@ -114,14 +301,17 @@ java -jar -Xmx300g /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeBC_UMI_finde
 
 EOF
 
-sicelore_jobids+=($(sbatch --job-name="$sample_name" "$sample_name"_"$i"_sicelore_2.sh))
+    sicelore_jobids+=($(sbatch --job-name="$sample_name" "$sample_name"_"$i"_sicelore_2.sh))
+    fi
+fi
 done
+exit
 
 ### after this is complete then merge files and run second script to merge 
 
 ## step 4: Merge all files and generate consensus sequences 
 
-#sbatch /gpfs/commons/groups/landau_lab/ahawkins/MDS_ONT_splice/ONT_processing_pipeline/sicelore_scripts/2.sicelore_part2/sicelore_part2.sh "$workdir"/output_files/sicelore_outputs $sample_name $workdir/output_files/sicelore_outputs/temp
+#sbatch  /gpfs/commons/groups/landau_lab/ahawkins/MDS_ONT_splice/ONT_processing_pipeline/sicelore_scripts/2.sicelore_part2/sicelore_part2.sh "$workdir"/output_files/sicelore_outputs $sample_name $workdir/output_files/sicelore_outputs/temp
 
 sic_part2=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/sicelore_scripts/sicelore_part2.sh "$workdir"/output_files/sicelore_outputs $sample_name $workdir/output_files/sicelore_outputs/temp))
 
@@ -135,4 +325,4 @@ junc_calling=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_fi
 ## step 6: Differential transcript usage (with permutations within cell types)
 
 diff_transcript=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/diff_transcript_usage_scripts/diff_transcript_pipeline.sh "$workdir"/output_files $run_files "$workdir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_all.introns.info.w.primary.annotations.txt "$workdir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_perind_numbers.counts.txt  $genotype_info $pattern $sample_name $nperm))
-
+'
