@@ -183,7 +183,7 @@ fi
 ##if the file exists and skips the step if it does. That way, if the pipeline
 ##is run multiple times, it can skip the 10x parsing step
 ##split this out so that it runs after parallel to other tasks
-
+    
 if [ ! -f "$workdir"/input_files/2.short_read_files/"$sample_name"_parsed_for_Nanopore.obj ]
 then
     echo "parsing 10X object"
@@ -209,6 +209,7 @@ EOF
     sbatch --job-name="$sample_name"_10X_parsing "$sample_name"_10X_parsing.sh
 
 else
+    parsedobj="$workdir"/input_files/2.short_read_files/"$sample_name"_parsed_for_Nanopore.obj
     echo "10x object parsing previously completed. running analyis with existing files"
 fi
 
