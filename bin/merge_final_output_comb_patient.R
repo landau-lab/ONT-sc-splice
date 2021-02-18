@@ -9,8 +9,8 @@ output = args[4]
 
 
 ## test data
-# path.to.outputs = "/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/CH_combined/diff_transcript_combined_output_remove_celltypes/NP/split_cluster_output"
-# path.to.metadata = "/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/CH_combined/diff_transcript_combined_output/combined_metadata/combined_metadata.csv"
+# path.to.outputs = "/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/CH_combined/diff_transcript_combined_merge_counts/split_cluster_output"
+# path.to.metadata = "/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/CH_combined/diff_transcript_combined_merge_counts/combined_metadata/combined_metadata.csv"
 
 path.to.three.outputs = paste(path.to.outputs, "/alt_three_prime/", sep = "")
 path.to.five.outputs = paste(path.to.outputs, "/alt_five_prime/", sep = "")

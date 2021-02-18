@@ -19,4 +19,4 @@ runfiles=$7
 echo $splitfiles
 echo $genotype
 
-Rscript "$runfiles"/combined_patient_permute_merge_reads_1WT.R $splitfiles $genotype $nperm $outdir $outfile $celltype
+Rscript "$runfiles"/combined_patient_permute_merge_reads_2WT_UMI.R $splitfiles $genotype $nperm $outdir $outfile $celltype

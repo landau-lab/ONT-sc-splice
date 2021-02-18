@@ -8,8 +8,8 @@ output = args[3]
 
 
 ## test data
-# path.to.outputs = "/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/MDS_P1_P2_P3/diff_transcript_combined_merge_counts/split_cluster_output"
-# path.to.metadata = "/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/MDS_P1_P2_P3/diff_transcript_combined_merge_counts/combined_metadata/combined_metadata.csv"
+# path.to.outputs = "/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/MDS_P5_P6_2WT/5_read_threshold/diff_transcript_combined_merge_counts_ind_celltypes_2WT/NP/split_cluster_output"
+# path.to.metadata = "/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/MDS_P5_P6_2WT/5_read_threshold/diff_transcript_combined_merge_counts_ind_celltypes_2WT/combined_metadata/combined_metadata.csv"
 
 path.to.three.outputs = paste(path.to.outputs, "/alt_three_prime/", sep = "")
 path.to.five.outputs = paste(path.to.outputs, "/alt_five_prime/", sep = "")
@@ -17,7 +17,7 @@ path.to.five.outputs = paste(path.to.outputs, "/alt_five_prime/", sep = "")
 ## read in all outputs 
 setwd(path.to.three.outputs)
 files = list.files(path.to.three.outputs)
-three.output.list = lapply(files, function(x) read.csv(file=x))
+three.output.list = lapply(files, function(x) read_csv(file=x))
 three.output = do.call(rbind, three.output.list)
 
 setwd(path.to.five.outputs)
@@ -32,6 +32,11 @@ message("output files loaded")
 
 ## load in metadata
 metadata = read.csv(path.to.metadata)
+metadata$intron_junction = paste(metadata$chr, metadata$start, metadata$end, sep = ":")
+metadata = metadata %>% select(-patient)
+metadata = distinct(metadata)
+metadata$intron_junction = paste(metadata$intron_junction, metadata$strand, sep = ":")
+metadata = metadata %>% select( - three_prime_ID, -five_prime_ID, -three_prime, -five_prime)
 
 ## merge output with metadata 
 three.merge.output = inner_join(three.output, metadata)
