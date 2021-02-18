@@ -37,11 +37,11 @@ metadata="$workdir"/3.Annotated_metadata
 ###############################################################
 
 cd $workdir 
-mkdir diff_transcript_combined_merge_counts
-cd ./diff_transcript_combined_merge_counts
+mkdir diff_transcript_combined_merge_counts_2WT
+cd ./diff_transcript_combined_merge_counts_2WT
 mkdir combined_metadata
 
-Rscript "$run_files"/bin/create_combined_metadata.R $metadata "$workdir"/diff_transcript_combined_merge_counts/combined_metadata $patients
+Rscript "$run_files"/bin/create_combined_metadata.R $metadata "$workdir"/diff_transcript_combined_merge_counts_2WT/combined_metadata $patients
 
 
 ##############################################################
@@ -59,7 +59,7 @@ Rscript "$run_files"/bin/create_combined_metadata.R $metadata "$workdir"/diff_tr
 mkdir split_cluster_files
 cd ./split_cluster_files
 
-for i in {1..1000}
+for i in {1..100}
 do 
 mkdir split_"$i"
 mkdir split_"$i"/three_prime
@@ -70,7 +70,7 @@ mkdir split_"$i"/five_prime/counts_files
 mkdir split_"$i"/five_prime/data_tables
 done
 
-Rscript "$run_files"/bin/split_clusters_comb_patient_merge_counts_1WT.R $counts $genotype $metadata "$workdir"/diff_transcript_combined_merge_counts/split_cluster_files $patients $pattern
+Rscript "$run_files"/bin/split_clusters_comb_patient_merge_counts_2WT.R $counts $genotype $metadata "$workdir"/diff_transcript_combined_merge_counts_2WT/split_cluster_files $patients $pattern
 
 ###########################################################
 ######## Step 3: Batch submit each split cluster for differential analysis
@@ -92,8 +92,8 @@ mkdir split_cluster_output/alt_five_prime
 mkdir logs
 
 permute_jobids=()
-for i in {1..500}; do
-permute_jobids+=($(sbatch --job-name="$sample_name" "$run_files"/bin/run_permute_merge_counts.sh "$workdir"/diff_transcript_combined_merge_counts/split_cluster_files/split_"$i" $genotype $nperm $patients "$workdir"/diff_transcript_combined_merge_counts/split_cluster_output output_"$i" "$run_files"/bin))
+for i in {1..100}; do
+permute_jobids+=($(sbatch --job-name="$sample_name" "$run_files"/bin/run_permute_merge_counts_2WT.sh "$workdir"/diff_transcript_combined_merge_counts_2WT/split_cluster_files/split_"$i" $genotype $nperm $patients "$workdir"/diff_transcript_combined_merge_counts_2WT/split_cluster_output output_"$i" "$run_files"/bin))
 done 
 
 ###########################################################
@@ -107,7 +107,7 @@ mkdir merge_final_output
 
 #sbatch "$run_files"/bin/run_merge_output.sh "$run_files"/bin "$workdir"/diff_transcript_output/split_cluster_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv "$workdir"/diff_transcript_output/merge_final_output
 
-merge=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/bin/run_merge_combine_output.sh "$run_files"/bin "$workdir"/diff_transcript_combined_merge_counts/split_cluster_output "$workdir"/diff_transcript_combined_merge_counts/combined_metadata/combined_metadata.csv "$workdir"/diff_transcript_combined_merge_counts/merge_final_output))
+merge=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/bin/run_merge_combine_output.sh "$run_files"/bin "$workdir"/diff_transcript_combined_merge_counts_2WT/split_cluster_output "$workdir"/diff_transcript_combined_merge_counts_2WT/combined_metadata/combined_metadata.csv "$workdir"/diff_transcript_combined_merge_counts_2WT/merge_final_output))
 
 echo "Done!" 
 
