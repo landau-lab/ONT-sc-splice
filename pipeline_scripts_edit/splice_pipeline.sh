@@ -14,7 +14,7 @@ module load samtools
 
 module load racon
 
-PATH=$PATH:~/spoa/build/bin/
+PATH=$PATH:/gpfs/commons/home/ahawkins/spoa/build/bin/
 PATH=$PATH:/gpfs/commons/home/gmullokandov/software/minimap2-2.17_x64-linux/minimap2
 echo $PATH
 
@@ -196,7 +196,7 @@ then
 #!/bin/bash
 
 #SBATCH --job-name=10x_parsing
-#SBATCH --mem-per-cpu=75G
+#SBATCH --mem-per-cpu=100G
 #SBATCH --partition=pe2
 #SBATCH --output=stderror_%j.log
 #SBATCH --error=stderror_%j.log
@@ -265,19 +265,21 @@ do
 
 if [ -f "$workdir"/output_files/sicelore_outputs/"$i".sub.fastq ]
 then
-    filename="$workdir"/output_files/sicelore_outputs/"$i".sub.fastq
-    size=$(stat -c %s $filename)
-    if [ $size>0 ]
+    if [ ! -f "$workdir"/output_files/sicelore_outputs/"$i".sub.GEUS10xAttributes.bam ]
     then
-        cat > "$sample_name"_"$i"_sicelore_2.sh <<EOF
+        filename="$workdir"/output_files/sicelore_outputs/"$i".sub.fastq
+        size=$(stat -c %s $filename)
+        if (( $size>0 ))
+        then
+            cat > "$sample_name"_"$i"_sicelore_2.sh <<EOF
 #!/bin/bash
 
 #SBATCH --job-name=Sicelore_2
-#SBATCH --mem-per-cpu=75G
+#SBATCH --mem-per-cpu=100G
 #SBATCH --partition=pe2
 #SBATCH --output=err_and_out/"$i"_stdout_%j.log
 #SBATCH --error=err_and_out/"$i"_stderror_%j.log
-#SBATCH --ntasks=5
+#SBATCH --ntasks=10
 
 source /etc/profile.d/modules.sh
 module load samtools
@@ -298,15 +300,17 @@ samtools index "$i".sub.GE.bam
 java -jar -Xmx200g /gpfs/commons/home/ahawkins/sicelore/Jar/Sicelore-1.0.jar AddBamReadSequenceTag I="$i".sub.GE.bam O="$i".sub.GEUS.bam FASTQ="$i".sub.fastq
 samtools index "$i".sub.GEUS.bam
 
-java -jar -Xmx300g /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeBC_UMI_finder-1.0.jar -i "$i".sub.GEUS.bam -o "$i".sub.GEUS10xAttributes.bam -k $parsedobj --maxUMIfalseMatchPercent 2 --maxBCfalseMatchPercent 5 --ncpu 10 --logFile "$i".sub_NanoporeBC_UMI_finder.log
+java -jar -Xmx1000g /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeBC_UMI_finder-1.0.jar -i "$i".sub.GEUS.bam -o "$i".sub.GEUS10xAttributes.bam -k $parsedobj --maxUMIfalseMatchPercent 2 --maxBCfalseMatchPercent 5 --ncpu 10 --logFile "$i".sub_NanoporeBC_UMI_finder.log
 
 EOF
 
     sicelore_jobids+=($(sbatch --job-name="$sample_name" "$sample_name"_"$i"_sicelore_2.sh))
+        fi
+    else
+    echo "analysis previously run on $i.sub.fastq. Using previous outputs"
     fi
 fi
 done
-exit
 
 ### after this is complete then merge files and run second script to merge 
 
