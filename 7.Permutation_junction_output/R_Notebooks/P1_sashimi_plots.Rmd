@@ -1,0 +1,63 @@
+---
+title: "P1_sashimi_plots"
+output: html_notebook
+---
+
+
+```{r}
+library(GenomicRanges)
+library(splicejam)
+```
+
+
+```{r}
+## gene-exon structure, gtf file
+exon_ref = fread("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/ONT_Splice_Pipeline/bin/annotation_reference/leafviz_all_exons.txt.gz")
+ergic3_ref = exon_ref %>% filter(gene_name == "ERGIC3")
+ergic3_ref = makeGRangesFromDataFrame(ergic3_ref)
+ergic3_ref@elementMetadata$gene_name = "ERGIC3"
+ergic3_ref
+```
+
+```{r}
+ergic3_cov = ergic3_ref
+ergic3_cov@elementMetadata$WT = 0
+ergic3_cov[which(ergic3_cov@ranges %in% p1_wt_granges@ranges),]
+  ergic3_cov[which(ergic3_cov@ranges %in% p1_wt_granges@ranges), p1_wt_granges]
+ergic3_cov
+```
+
+
+```{r}
+p1 = read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/1.ind_patient_logOR/100k_perm/MDS_P1_combined/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_info.txt")
+```
+
+```{r}
+p1.ergic3 = p1 %>% filter(gene == "ERGIC3")
+
+## create granges object for WT and MUT 
+colnames(p1.ergic3)[1:3] = c("chr", "start", "end")
+p1_wt = p1.ergic3 %>% select(chr, start, end, strand_1, obs.wt)
+colnames(p1_wt)[5] = c("score")
+p1_wt_granges = makeGRangesFromDataFrame(p1_wt)
+p1_wt_granges@elementMetadata$score = p1_wt$score
+p1_wt_granges@elementMetadata$sample_id = "WT"
+head(p1_wt_granges)
+```
+
+```{r}
+testfilesDF <- data.frame(url="WT",
+   type="coverage_gr",
+   sample_id="WT",
+   scale_factor=1);
+testfilesDF;
+```
+```{r}
+sh1 <- splicejam::prepareSashimi(GRangesList(TestGene1=ergic3_ref),
+   filesDF=testfilesDF,
+   gene="ERGIC3",
+   sample_id="WT",
+   covGR=ergic3_cov,
+   juncGR=p1_wt_granges);
+```
+

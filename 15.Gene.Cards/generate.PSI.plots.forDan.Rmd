@@ -1,0 +1,386 @@
+
+```{r}
+library(tidyverse)
+library(Seurat)
+library(patchwork) # To display 2 charts together
+library(staplr)
+library(ggpubr)
+library(cowplot)
+library(gridExtra)
+```
+
+```{r}
+gene <- "ERGIC3"
+cryptic.junction <- "chr20:35556271:35556954:+"
+
+#gene <- "SLC25A39"
+#cryptic.junction <- "chr17:44322552:44322807:-"
+
+#gene <- "PPOX"
+#cryptic.junction <- "chr1:161167234:161167338:+"
+
+#gene <- "TMEM14C"
+
+#gene <- "ABCB7"
+
+gene <- "METTL5"
+cryptic.junction <- "chr2:169812524:169815476:-"
+
+#gene <- "METTL5"
+#cryptic.junction <- "chr2:169812524:169819560:-"
+
+
+#gene <- "DPH5"
+#cryptic.junction <- "chr1:100992754:100995109:-"
+
+
+gene <- "ZNF451"
+cryptic.junction <- "chr6:57099141:57124733:+"
+
+```
+
+
+##Print a list of cryptic junctions
+```{r}
+
+list.of.genes <- c("ABCB7","ANKHD1","BRD9","COASY","CRNDE","DPH5","DYNLL1","ENOX2","ERGIC3","GAS8","MAP3K7","METTL5","ORAI2","PGBBD1","SEPT6","SERBP1","TMEM14C","UQCC","UXS1","ZNF771","ZZDHHC16","PPOX", "ZNF451")
+
+list.of.juncs <- c("")
+
+cryptic.3p.splicing.table <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/4.Comb_patients_merge_counts/CH_combined/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_info.txt")
+
+cryptic.3p.splicing.table <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/6.Comb_patients_2WT/5_read_threshold/MDS_P5_P6/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_info.txt")
+
+cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene %in% list.of.genes & cryptic.3p.splicing.table$dPSI > 0),]
+
+write.table(cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene %in% list.of.genes & cryptic.3p.splicing.table$verdict == "cryptic_threeprime" & cryptic.3p.splicing.table$threep_distance > -100 & cryptic.3p.splicing.table$threep_distance < 0),c("gene","intron_junction")], file ="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/15.Gene.Cards/cryptic.junction.list.txt", quote = F, col.names = F, row.names = F)
+```
+
+```{r}
+cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene =="ZNF451"),]
+
+cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene %in% list.of.genes),]
+
+cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene %in% list.of.genes & cryptic.3p.splicing.table$pvalue <= 0.05),]
+
+cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene %in% list.of.genes & cryptic.3p.splicing.table$threep_distance > -200 & cryptic.3p.splicing.table$threep_distance < 0),]
+
+cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene %in% list.of.genes & cryptic.3p.splicing.table$threep_distance > -200 & cryptic.3p.splicing.table$threep_distance < 0 & cryptic.3p.splicing.table$pvalue <= 0.05),]
+```
+
+
+```{r}
+table(paste(cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene %in% list.of.genes),]$gene))
+
+table(paste(cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene %in% list.of.genes & cryptic.3p.splicing.table$threep_distance > -200 & cryptic.3p.splicing.table$threep_distance < 0),]$gene))
+```
+
+
+
+```{r}
+
+##Grab the results from Bulk Mut and Bulk Wt
+
+#1WT
+cryptic.3p.splicing.table <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/4.Comb_patients_merge_counts/CH_combined/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_info.txt")
+
+#2WT
+#cryptic.3p.splicing.table <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/6.Comb_patients_2WT/5_read_threshold/CH_combined/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_info.txt")
+
+cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$gene == gene),]
+
+colname.list <- c("pvalue","dPSI","total.reads", "mut.psi","mut.reads", "wt.psi", "wt.reads")
+
+psi.data <- as.data.frame(matrix(ncol=length(colname.list), nrow=1))
+colnames(psi.data) <- colname.list
+rownames(psi.data) <- c("ALL")
+
+psi.data["ALL",]$pvalue <- cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$intron_junction == cryptic.junction),]$pvalue
+psi.data["ALL",]$dPSI <- cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$intron_junction == cryptic.junction),]$dPSI
+psi.data["ALL",]$mut.psi <- cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$intron_junction == cryptic.junction),]$mut.psi
+psi.data["ALL",]$wt.psi <- cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$intron_junction == cryptic.junction),]$wt.psi
+psi.data["ALL",]$mut.reads <- cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$intron_junction == cryptic.junction),]$three.mut.cluster.cov
+psi.data["ALL",]$wt.reads <- cryptic.3p.splicing.table[which(cryptic.3p.splicing.table$intron_junction == cryptic.junction),]$three.wt.cluster.cov
+psi.data["ALL",]$total.reads <- psi.data["ALL",]$mut.reads + psi.data["ALL",]$wt.reads
+
+
+#Loop through cell types and grab infromation for that cryptic junction
+
+celltype.list <- c("HSPC","IMP","MEP","EP","NP")
+
+for (ct in celltype.list){
+  
+  cryptic.3p.splicing.table.ct <- read.table(paste0("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/5.Comb_patients_ind_celltype_merge_counts/CH_combined/", ct ,"/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_info.txt"))
+  
+  cryptic.3p.splicing.table.ct[which(cryptic.3p.splicing.table.ct$gene == gene),]
+  
+  #cryptic.3p.splicing.table.ct <- read.table(paste0("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/CH_combined/", ct ,"/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_info.txt"))
+  
+  
+  if(nrow(cryptic.3p.splicing.table.ct[which(cryptic.3p.splicing.table.ct$intron_junction == cryptic.junction),])>0){
+    psi.data[ct,]$pvalue <- cryptic.3p.splicing.table.ct[which(cryptic.3p.splicing.table.ct$intron_junction == cryptic.junction),]$pvalue
+    psi.data[ct,]$dPSI <- cryptic.3p.splicing.table.ct[which(cryptic.3p.splicing.table.ct$intron_junction == cryptic.junction),]$dPSI
+    psi.data[ct,]$mut.psi <- cryptic.3p.splicing.table.ct[which(cryptic.3p.splicing.table.ct$intron_junction == cryptic.junction),]$mut.psi
+    psi.data[ct,]$wt.psi <- cryptic.3p.splicing.table.ct[which(cryptic.3p.splicing.table.ct$intron_junction == cryptic.junction),]$wt.psi
+    psi.data[ct,]$mut.reads <- cryptic.3p.splicing.table.ct[which(cryptic.3p.splicing.table.ct$intron_junction == cryptic.junction),]$three.mut.cluster.cov
+    psi.data[ct,]$wt.reads <- cryptic.3p.splicing.table.ct[which(cryptic.3p.splicing.table.ct$intron_junction == cryptic.junction),]$three.wt.cluster.cov
+    psi.data[ct,]$total.reads <- psi.data[ct,]$mut.reads + psi.data[ct,]$wt.reads
+    
+  }
+}
+
+c("ALL",celltype.list)
+
+
+psi.data <- add_column(psi.data, rownames(psi.data), .before = 1)
+colnames(psi.data)[1] <- "CellType"
+psi.data$CellType <- factor(psi.data$CellType, levels = c("ALL", "HSPC","IMP","MEP","EP","NP"))
+psi.data
+```
+
+```{r}
+
+#Load CH Seurat Object:
+#ch.samples.integrated@assays$RNA@data[1:20,1:20]
+#Idents(ch.samples.integrated)[1:5]
+
+#Grab only genotyped Cell Assinged Cells  - only do this once
+#ch.samples.integrated@meta.data$CellType.genotyped <- NA  
+#ch.samples.integrated@meta.data[which(ch.samples.integrated@meta.data$Genotype_1UMI_10x != "NA"),]$CellType.genotyped <- ch.samples.integrated@meta.data[which(ch.samples.integrated@meta.data$Genotype_1UMI_10x != "NA"),]$CellType
+#table(ch.samples.integrated@meta.data$CellType.genotyped)
+
+```
+
+
+##Grab Normalized Expression Values from Seurat object - Illumina 
+
+```{r}
+#Make CellType the identities and Get average expression for gene of choice using AverageExpression Function
+#The data slot of the seruat object has Log-Normalized Values for expression
+
+Idents(ch.samples.integrated) <- "CellType.genotyped"
+expression.values.ct <- AverageExpression(ch.samples.integrated, assay = "RNA" ,features = gene, slot="data")
+expression.values.ct$RNA <- as.data.frame(t(expression.values.ct$RNA))
+
+ch.samples.integrated@meta.data$All <- "ALL"
+Idents(ch.samples.integrated) <- "All"
+expression.values.all <- AverageExpression(ch.samples.integrated, assay = "RNA" ,features = gene, slot="data")
+expression.values.all$RNA <- as.data.frame(t(expression.values.all$RNA))
+
+expression.values <- rbind(expression.values.all$RNA, expression.values.ct$RNA)
+psi.data$Illumina.Expression <- NA
+psi.data$Illumina.Expression <- expression.values[rownames(psi.data),gene]
+psi.data
+```
+
+```{r}
+ch.ont.samples.integrated@meta.data
+```
+
+
+##Grab Normalized Expression Values from Seurat object - ONT 
+
+```{r}
+#Load CH Seurat Object:
+#ch.samples.integrated@assays$RNA@data[1:20,1:20]
+#Idents(ch.samples.integrated)[1:5]
+
+#Make CellType the identities and Get average expression for gene of choice using AverageExpression Function
+#The data slot of the seruat object has Log-Normalized Values for expression
+Idents(ch.ont.samples.integrated) <- "Cell.Assignment"
+expression.values.ct <- AverageExpression(ch.ont.samples.integrated, assay = "RNA" ,features = gene, slot="data")
+expression.values.ct$RNA <- as.data.frame(t(expression.values.ct$RNA))
+
+ch.ont.samples.integrated@meta.data$All <- "ALL"
+Idents(ch.ont.samples.integrated) <- "All"
+expression.values.all <- AverageExpression(ch.ont.samples.integrated, assay = "RNA" ,features = gene, slot="data")
+expression.values.all$RNA <- as.data.frame(t(expression.values.all$RNA))
+
+expression.values <- rbind(expression.values.all$RNA, expression.values.ct$RNA)
+psi.data$ONT.Expression <- NA
+psi.data$ONT.Expression <- expression.values[rownames(psi.data),gene]
+psi.data
+```
+
+##Find coefficient
+
+```{r}
+OldMax = max(psi.data$ONT.Expression)
+OldMin = min(psi.data$ONT.Expression)
+OldRange = (OldMax - OldMin)
+NewMax = max(psi.data$dPSI)
+NewMin = min(psi.data$dPSI)
+NewRange = (NewMax - NewMin)
+
+psi.data$ONT.Expression.transformed <- NA
+
+for (i in 1:nrow(psi.data))  {
+  print(i)
+  OldValue = psi.data$ONT.Expression[i]
+  OldRange = (OldMax - OldMin)
+  if (OldRange == 0) {
+    NewValue = NewMin
+    
+  } else{
+    NewRange = (NewMax - NewMin)  
+    NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
+  }
+  
+  psi.data$ONT.Expression.transformed[i] <- NewValue
+  
+}
+
+psi.data
+
+```
+
+
+```{r}
+#coeff <- (NewValue/OldValue)
+ExpressionColor <- "red"
+dPSIColor <- "blue"
+
+ggplot(psi.data, aes(x=CellType, group = 1)) + 
+  geom_line( aes(y=dPSI), color=dPSIColor) + 
+  geom_line( aes(y=ONT.Expression.transformed), linetype = "dashed", color=ExpressionColor)+  
+  scale_y_continuous(
+    name = "dPSI",
+    #limits = c(NewMin,NewMax+1),
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression \n (log-normalized counts)")) +
+  theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13)) +
+  ggtitle(paste0("dPSI and Expression for ", gene ," cryptic junction - ", cryptic.junction)) 
+
+
+##Or you can do it directly -  without transforming it and saving as a new column
+
+ggplot(psi.data, aes(x=CellType, group = 1)) + 
+  geom_line( aes(y=dPSI), color=dPSIColor) + 
+  geom_line( aes(y=(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed", color=ExpressionColor)+  
+  scale_y_continuous(
+    name = "dPSI",
+    #limits = c(NewMin,NewMax+1),
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression \n (log-normalized counts)")) +
+  theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13)) +
+  ggtitle(paste0("dPSI and Expression for ", gene ," cryptic junction - ", cryptic.junction)) 
+
+
+
+```
+
+
+
+##trying the regression
+
+```{r}
+ggplot(psi.data, aes(x=CellType, group = 1)) + 
+  geom_point(aes(y= dPSI), color=dPSIColor) +
+  stat_smooth(aes(y= dPSI), method = "loess", formula = y ~ x, se = F) +
+  geom_point( aes(y=ONT.Expression*coeff), linetype = "dashed", color=ExpressionColor)+ 
+  stat_smooth(aes(y =ONT.Expression*coeff), linetype = "dashed", color=ExpressionColor, method = "loess", formula = y ~ x, se = F)+
+  scale_y_continuous(
+    name = "dPSI",
+    #limits = c(NewMin,NewMax+1),
+    sec.axis = sec_axis(~./coeff , name="ONT Expression \n (log-normalized counts)")) +
+  theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13)) +
+  ggtitle(paste0("dPSI and Expression for ", gene ," cryptic junction - ", cryptic.junction)) 
+
+
+
+ggplot(psi.data, aes(x=CellType, group = 1)) + 
+  geom_point(aes(y= dPSI), color=dPSIColor) +
+  stat_smooth(aes(y= dPSI), method = "lm", formula = y~x, se = F) +
+  geom_point( aes(y=ONT.Expression*coeff), linetype = "dashed", color=ExpressionColor)+ 
+  stat_smooth(aes(y =ONT.Expression*coeff), linetype = "dashed", color=ExpressionColor, method = "lm", formula = y~x, se = F)+
+  scale_y_continuous(
+    name = "dPSI",
+    #limits = c(NewMin,NewMax+1),
+    sec.axis = sec_axis(~(.-10)/coeff , name="ONT Expression \n (log-normalized counts)")) +
+  theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13)) +
+  ggtitle(paste0("dPSI and Expression for ", gene ," cryptic junction - ", cryptic.junction)) 
+
+
+
+ggplot(psi.data, aes(x=CellType, group = 1)) + 
+  geom_point(aes(y= dPSI), color=dPSIColor) +
+  stat_smooth(aes(y= dPSI), method = "lm", formula = y ~ poly(x, 2,raw=TRUE), se = F) +
+  geom_point( aes(y=ONT.Expression*coeff), linetype = "dashed", color=ExpressionColor)+ 
+  stat_smooth(aes(y =ONT.Expression*coeff), linetype = "dashed", color=ExpressionColor, method = "lm", formula = y ~ poly(x, 2,raw=TRUE), se = F)+
+  scale_y_continuous(
+    name = "dPSI",
+    #limits = c(NewMin,NewMax+1),
+    sec.axis = sec_axis(~./coeff , name="ONT Expression \n (log-normalized counts)")) +
+  theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13)) +
+  ggtitle(paste0("dPSI and Expression for ", gene ," cryptic junction - ", cryptic.junction)) 
+
+
+  
+x <- 1:5
+y <- c(2,4,6,8,7)
+lo <- loess(y~x)
+plot(x,y)
+lines(predict(lo), col='red', lwd=2)
+```
+
+
+##Get the Bulk PSI for DNMT3A and CH.combined
+
+```{r}
+ch.bulk.psi <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/12.Bulk.PSI/output/CH259.CH305.all.intron.metadata.with.bulkPSI.ONT.tsv", sep="\t")
+
+dnmt3a.bulk.psi <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/12.Bulk.PSI/output/CH502_DNMT3A.all.intron.metadata.with.bulkPSI.ONT.tsv", sep="\t")
+dnmt3a.bulk.psi <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/12.Bulk.PSI/output/CH502_DNMT3A.WT.only.all.intron.metadata.with.bulkPSI.ONT.tsv", sep="\t")
+rownames(dnmt3a.bulk.psi) <- dnmt3a.bulk.psi$intron.junction
+
+ch.bulk.psi.val <- round(ch.bulk.psi[cryptic.junction,]$bulk.psi.CH259.CH305,3)
+dnmt3a.bulk.psi.val <- round(dnmt3a.bulk.psi[cryptic.junction,]$bulk.psi,3)
+
+ch.bulk.psi.val
+dnmt3a.bulk.psi.val 
+```
+
+
+```{r fig.height=15, fig.width=10}
+
+library(cowplot)
+
+text1 <- ggparagraph(text = paste0("BULK_WT psi = ", dnmt3a.bulk.psi.val,"\n \nBULK_MUT psi = ",ch.bulk.psi.val), size = 15, color = "black")
+
+text1 <- plot_grid(NULL,NULL,text1, nrow = 2, ncol=3, rel_widths = c(2, 2, 1.5), rel_heights = c(2, 1))
+
+text2 <- ggparagraph(text = paste0("CH.combined – 1WT UMI \n",gene,"\n",cryptic.junction), face = "bold", size = 20, color = "black")
+
+table <- ggtexttable(psi.data[,-10],row = NULL,theme = ttheme("light"))
+ggarrange(text1, text2, p2, table,NULL,
+          ncol = 1, nrow = 5,
+          heights = c(0.7,0.3,1,0.5,0.7))
+
+final.plot <- ggarrange(text1, text2, p2, table,
+          ncol = 1, nrow = 4,
+          heights = c(1.2,0.3,1,0.5))
+
+final.plot
+
+png('/gpfs/commons/groups/landau_lab/SF3B1_splice_project/15.Gene.Cards/dPSI.Expression.plots/CH.combined.1WT.ERGIC3.dPSI.Exp.plot.png', width = 250, height = 400, units = 'mm', res = 300)
+final.plot
+dev.off()
+```
+
+
+
+
+

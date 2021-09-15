@@ -1,0 +1,316 @@
+##-----------------------------DSB NORMALIZATION ----------------------------##
+#Load packages
+```{r}
+library(Seurat)
+library(dsb)
+library(tidyverse)
+
+```
+
+#Load in the original MDS seurat Object
+```{r}
+load("/Users/Celine/Documents/Landau/CITE-seq/2_MDS_patients/mds.p4.p5.p6.CITE.Analysis/mds.sample.integrated.p4.5.6.in.progress_2_withPseudotime.RData")
+mds.samples.integrated <- seurat
+
+```
+
+```{r}
+dsb_data = function(path_to_raw_data){
+  require(Seurat)
+  require(dsb)
+  raw = Read10X(path_to_raw_data)
+  prot = raw$`Antibody Capture`
+  rna = raw$`Gene Expression`
+  rna_size = log10(Matrix::colSums(rna))
+  prot_size = log10(Matrix::colSums(prot))
+  ngene = Matrix::colSums(rna > 0)
+  mtgene = grep(pattern = "^MT-", rownames(rna), value = TRUE)
+  propmt = Matrix::colSums(rna[mtgene, ]) / Matrix::colSums(rna)
+  md = as.data.frame(cbind(propmt, rna_size, ngene, prot_size))
+  md$bc = rownames(md)
+  out = list(prot = prot,
+             rna = rna,
+             md = md)
+  return(out)
+}
+```
+
+```{r}
+mds_p5_1_dsb <- dsb_data("/Users/Celine/Documents/Landau/CITE-seq/raw_feature_matrices/raw_feature_bc_matrix_p5_1/")
+mds_p5_2_dsb <- dsb_data("/Users/Celine/Documents/Landau/CITE-seq/raw_feature_matrices/raw_feature_bc_matrix_p5_2/")
+mds_p6_dsb <- dsb_data("/Users/Celine/Documents/Landau/CITE-seq/raw_feature_matrices/raw_feature_bc_matrix_p6/")
+```
+
+```{r fig.height=10, fig.width=10}
+##Make a list of patients
+patient.list <- list("MDS_P5_1" = mds_p5_1_dsb,
+                     "MDS_P5_2" = mds_p5_2_dsb,
+                     "MDS_P6" = mds_p6_dsb) 
+plots.1 <- list()
+plots.2 <- list()
+for(i in 1:length(patient.list)){
+  md <- patient.list[[i]]$md
+  prot <- patient.list[[i]]$prot
+  rna <- patient.list[[i]]$rna
+  patient <- names(patient.list[i])
+  plots.1[[i]] <- ggplot(md[md$prot_size > 0, ], aes(x = prot_size)) +
+    geom_histogram(fill = "firebrick2", binwidth = .05) + 
+    ggtitle("Protein library size \n distribution", subtitle = patient) 
+  plots.2[[i]] <- ggplot(md[md$rna_size > 0, ], aes(x = rna_size)) +
+    geom_histogram(fill = "dodgerblue", binwidth = .05) + 
+    ggtitle("RNA library size \n distribution", subtitle = patient)
+}
+cowplot::plot_grid(plotlist = c(plots.1, plots.2), ncol = 3)
+```
+
+##Try to use the raw and filtered Cell Ranger output to define the negative cells
+```{r fig.height=8, fig.width=}
+##Use the filtered Cell Ranger output which contains only cells based on the 10X cell calling algorithm. Then, load the raw output, remove the cells defined by the filtered output from the raw output, and use the remaining filtered matrix as your background (I'd also remove the drops from the background matrix with prot lib size < 0.25)
+
+##Load the data and run through dsb_data function
+filtered_matrix_p5_1 <- dsb_data("/Users/Celine/Documents/Landau/CITE-seq/filtered_feature_matrices/filtered_feature_bc_matrix_p5_1/")
+filtered_matrix_p5_2 <- dsb_data("/Users/Celine/Documents/Landau/CITE-seq/filtered_feature_matrices/filtered_feature_bc_matrix_p5_2/")
+filtered_matrix_p6 <- dsb_data("/Users/Celine/Documents/Landau/CITE-seq/filtered_feature_matrices/filtered_feature_bc_matrix_p6/")
+raw_matrix_p5_1 <- mds_p5_1_dsb 
+raw_matrix_p5_2 <- mds_p5_2_dsb 
+raw_matrix_p6 <- mds_p6_dsb
+
+##Create lists of the raw and filtered matrices
+mds.patient.list = list("MDS_P5_1" = list("raw" = raw_matrix_p5_1,
+                                                   "filtered" =filtered_matrix_p5_1),
+                                 "MDS_P5_2" = list("raw" = raw_matrix_p5_2, 
+                                                   "filtered" = filtered_matrix_p5_2),
+                                 "MDS_P6" = list("raw" = raw_matrix_p6, 
+                                                 "filtered" = filtered_matrix_p6))
+plots.5 <- list()
+cells_mtx_rawprot <- list()
+negative_mtx_rawprot <- list()
+
+for(i in 1:length(mds.patient.list)){
+  #Define variables
+  md = mds.patient.list[[i]]$raw$md
+  prot = mds.patient.list[[i]]$raw$prot
+  rna = mds.patient.list[[i]]$raw$rna
+  patient = names(mds.patient.list[i])
+  #Subset by patient and tandardize names of barcodes 
+  seurat_cells <- rownames(mds.samples.integrated@meta.data[which(mds.samples.integrated@meta.data$orig.ident == patient),])
+  seurat_cells <- unlist(lapply(str_replace_all(seurat_cells,pattern = "_.", replacement = "-1"), "[",1))
+  #Define negative cells
+  final.colnames = setdiff(colnames(mds.patient.list[[i]]$raw$prot), colnames(mds.patient.list[[i]]$filtered$prot))
+  background_drops.prot = mds.patient.list[[i]]$raw$prot[ , final.colnames]
+  background_drops.md = mds.patient.list[[i]]$raw$md[final.colnames , ]
+  background_drops.rna = mds.patient.list[[i]]$raw$rna[ , final.colnames]
+  #Define a vector of background / empty droplet barcodes based on protein library size and mRNA content
+  background_drops = background_drops.md[background_drops.md$prot_size > 1.5 & background_drops.md$ngene < 80, ]$bc
+  negative_mtx_rawprot[[i]] = prot[ , background_drops] %>%  as.matrix()
+  print(as.data.frame(negative_mtx_rawprot))
+  print(intersect(seurat_cells, background_drops))
+  p5 =  ggplot(background_drops.md[background_drops.md$prot_size > 1.5 & background_drops.md$ngene < 80, ], aes(x = prot_size)) + geom_histogram(fill = "firebrick2", binwidth = 0.05) + ggtitle("Protein library size \n distribution background drops", subtitle = patient)
+  #Define positive cells =
+  p6 = ggplot(mds.patient.list[[i]]$filtered$md, aes(x = prot_size)) + geom_histogram(fill = "dodgerblue", binwidth = 0.05) + ggtitle("Protein library size \n distribution positive drops", subtitle = patient)
+  #Visualize
+  plots.5[[i]] <- cowplot::plot_grid(p5, p6, nrow = 1)
+  #Define cell_mtx_rawprot
+  cells_mtx_rawprot[[i]] = mds.patient.list[[i]]$filtered$prot[ ,seurat_cells] %>% as.matrix()
+  as.data.frame(cells_mtx_rawprot)
+}
+
+names(cells_mtx_rawprot) <- c("MDS_P5_1", "MDS_P5_2", "MDS_P6")
+names(negative_mtx_rawprot) <- c("MDS_P5_1", "MDS_P5_2", "MDS_P6")
+cowplot::plot_grid(plotlist = plots.5, ncol = 1)
+
+```
+
+
+```{r}
+##DSB normalization
+dsb_norm_prot_mds_p5_1 = DSBNormalizeProtein(
+                           cell_protein_matrix = cells_mtx_rawprot$MDS_P5_1,
+                           empty_drop_matrix = negative_mtx_rawprot$MDS_P5_1,
+                           denoise.counts = FALSE,
+                           use.isotype.control = FALSE)
+as.data.frame(dsb_norm_prot_mds_p5_1)
+
+dsb_norm_prot_mds_p5_2 = DSBNormalizeProtein(
+                           cell_protein_matrix = cells_mtx_rawprot$MDS_P5_2,
+                           empty_drop_matrix = negative_mtx_rawprot$MDS_P5_2,
+                           denoise.counts = FALSE,
+                           use.isotype.control = FALSE)
+as.data.frame(dsb_norm_prot_mds_p5_2)
+
+dsb_norm_prot_mds_p6 = DSBNormalizeProtein(
+                           cell_protein_matrix = cells_mtx_rawprot$MDS_P6,
+                           empty_drop_matrix = negative_mtx_rawprot$MDS_P6,
+                           denoise.counts = FALSE,
+                           use.isotype.control = FALSE)
+as.data.frame(dsb_norm_prot_mds_p6)
+
+save(dsb_norm_prot_mds_p5_1, dsb_norm_prot_mds_p5_2, dsb_norm_prot_mds_p6, file="/Users/Celine/Documents/Landau/CITE-seq/2_MDS_patients/mds.p4.p5.p6.CITE.Analysis/mds_dsb_norm.Rdata")
+```
+
+#Subset Seurat object by patient ident
+#Note - Do this for each individual Patient
+```{r}
+##MDS_P5_1
+dsb_norm_info <- as.data.frame(dsb_norm_prot_mds_p5_1)
+colnames(dsb_norm_info) <- str_replace_all(colnames(dsb_norm_info), pattern = "-.", replacement = "")
+colnames(dsb_norm_info) <- paste(colnames(dsb_norm_info),"_2",sep="")
+
+Idents(mds.samples.integrated)[1:5]
+Idents(mds.samples.integrated) <- "orig.ident"
+mds.samples.integrated_p5_1_subset  <- subset(mds.samples.integrated, idents="MDS_P5_1")
+mds.samples.integrated_p5_1_subset@meta.data
+
+mds.samples.integrated_p5_1_subset[["CITE_dsb"]] <- CreateAssayObject(data = as.matrix(dsb_norm_info))
+
+##MDS_P5_2
+dsb_norm_info <- as.data.frame(dsb_norm_prot_mds_p5_2)
+colnames(dsb_norm_info) <- str_replace_all(colnames(dsb_norm_info), pattern = "-.", replacement = "")
+colnames(dsb_norm_info) <- paste(colnames(dsb_norm_info),"_3",sep="")
+
+Idents(mds.samples.integrated)[1:5]
+Idents(mds.samples.integrated) <- "orig.ident"
+mds.samples.integrated_p5_2_subset  <- subset(mds.samples.integrated, idents="MDS_P5_2")
+mds.samples.integrated_p5_2_subset@meta.data
+
+mds.samples.integrated_p5_2_subset[["CITE_dsb"]] <- CreateAssayObject(data = as.matrix(dsb_norm_info))
+
+##MDS_P6
+dsb_norm_info <- as.data.frame(dsb_norm_prot_mds_p6)
+colnames(dsb_norm_info) <- str_replace_all(colnames(dsb_norm_info), pattern = "-.", replacement = "")
+colnames(dsb_norm_info) <- paste(colnames(dsb_norm_info),"_4",sep="")
+
+Idents(mds.samples.integrated)[1:5]
+Idents(mds.samples.integrated) <- "orig.ident"
+mds.samples.integrated_p6_subset  <- subset(mds.samples.integrated, idents="MDS_P6")
+mds.samples.integrated_p6_subset@meta.data
+  
+mds.samples.integrated_p6_subset[["CITE_dsb"]] <- CreateAssayObject(data = as.matrix(dsb_norm_info))
+#mds.samples.integrated_p6_subset@assays$CITE_dsb[1:5,1:5]
+```
+
+##Ridge plot to look at antibody distribution
+```{r fig.height=10, fig.width=10}
+##Run through each patient individually here
+Idents(mds.samples.integrated_p6_subset) <- "Cell.Assignment_adj"
+antibodies <- rownames(mds.samples.integrated_p6_subset@assays$CITE_dsb)
+#antibodies <- c("ADT-CD38","ADT-CD41","ADT-CD36","ADT-CD47","ADT-CD84","ADT-CD71","ADT-CD99","ADT-CD45")
+RidgePlot(mds.samples.integrated_p6_subset, features = antibodies, sort=T, assay="CITE_dsb")
+RidgePlot(mds.samples.integrated_p6_subset, features = antibodies, sort=T, assay="ADT")
+celltypes <- list("HSPC", "IMP", "NP", "Mat_Mono", "MkP", "MEP", "EP")
+
+```
+
+##Quick Box_Plot view of differences - Again, run through this for each patient individually 
+```{r }
+##Grab the CITE_dsb vs ADT info and add to metadata
+patient.list.subset <- list("mds.samples.integrated_p5_1_subset" = mds.samples.integrated_p5_1_subset,
+                            "mds.samples.integrated_p5_2_subset" = mds.samples.integrated_p5_2_subset,
+                            "mds.samples.integrated_p6_subset" = mds.samples.integrated_p6_subset)
+
+##Add _CLR and _DSB columns to the metadata
+for(i in 1:length(patient.list.subset)){
+  DefaultAssay(patient.list.subset[[i]]) <- "ADT"
+  ADT_clr_expression <- FetchData(patient.list.subset[[i]], vars=antibodies)
+  DefaultAssay(patient.list.subset[[i]]) <- "CITE_dsb"
+  CITE_dsb_expression <- FetchData(patient.list.subset[[i]], vars=antibodies)
+  colnames(ADT_clr_expression) <- paste(colnames(ADT_clr_expression),"_CLR", sep="")
+  colnames(CITE_dsb_expression) <- paste(colnames(CITE_dsb_expression),"_DSB", sep="")
+  patient.list.subset[[i]] <- AddMetaData(patient.list.subset[[i]], ADT_clr_expression)
+  patient.list.subset[[i]] <- AddMetaData(patient.list.subset[[i]], CITE_dsb_expression)
+}
+
+##Check that all the metadata columns are correct
+colnames(patient.list.subset$mds.samples.integrated_p6_subset@meta.data)
+save(patient.list.subset, file = "/Users/Celine/Documents/Landau/CITE-seq/2_MDS_patients/mds.p4.p5.p6.CITE.Analysis/patient.list.subset.Rdata")
+ADT_clr_expression
+CITE_dsb_expression
+
+```
+
+##Make boxplots comparing MUT v WT for DSB and CLR normalizations
+```{r}
+patient.list.subset$mds.samples.integrated_p5_1_subset@assays$CITE_dsb@data[1:10,1:10]
+```
+
+```{r}
+#CurrObj <- patient.list.subset$mds.samples.integrated_p5_1_subset
+#CurrObj <- patient.list.subset$mds.samples.integrated_p5_2_subset
+#CurrObj <- patient.list.subset$mds.samples.integrated_p6_subset
+merged.patient.list <- merge(x = patient.list.subset$mds.samples.integrated_p5_1_subset, y = c(patient.list.subset$mds.samples.integrated_p5_2_subset, patient.list.subset$mds.samples.integrated_p6_subset))
+CurrObj <- merged.patient.list
+colnames(merged.patient.list@meta.data)[68:90]
+```
+
+
+```{r fig.height=10, fig.width=15}
+#Boxpltos for DSB split by MUT v WT
+features.list <- c("ADT.CD38_DSB","ADT.CD41_DSB","ADT.CD42_DSB","ADT.CD45RA_DSB","ADT.CD36_DSB","ADT.CD69_DSB","ADT.CD9_DSB","ADT.CD14_DSB","ADT.CD37_DSB","ADT.CD47_DSB", "ADT.CD52_DSB", "ADT.CD84_DSB","ADT.CD79B_DSB","ADT.CD81_DSB","ADT.CD71_DSB","ADT.CD49f_DSB","ADT.CD7_DSB","ADT.CD99_DSB","ADT.CXCR4_DSB","ADT.FLT3_DSB","ADT.CD45_DSB","ADT.CD45RB_DSB","ADT.CD45RO_DSB")
+
+plots.4 <- list()
+for(i in 1:length(features.list)){
+  feature <- features.list[[i]]
+  require(ggpubr)
+  genotype <- "Genotype_2UMI"
+  xvar <- "Cell.Assignment_adj"
+  ct_list <- c("HSPC","IMP","NP","MkP","MEP","EP","MonoDC")
+  
+  plots.4[[i]] <- ggplot(CurrObj@meta.data[which((CurrObj@meta.data[[genotype]] == "MUT" | CurrObj@meta.data[[genotype]] == "WT") & (CurrObj$Cell.Assignment_adj %in% ct_list) ),], aes_string(x = xvar, y = feature, fill = genotype)) + 
+  geom_boxplot() + 
+  labs(title = feature) +
+  stat_compare_means(method = "wilcox.test", label = "p.signif", hide.ns = TRUE) + 
+  scale_fill_manual(values = c("royalblue1", "firebrick2"),
+                      breaks = c("WT", "MUT")) + 
+  theme_classic(base_size = 17)
+}
+
+cowplot::plot_grid(plotlist = plots.4, ncol = 5)
+
+```
+
+##Compare the results from Seurat CLR Normalization vs DSB normalization
+```{r fig.height=5, fig.width=11}
+##graph CDR normalization
+library(ggpubr)
+genotype <- "Genotype_2UMI"
+xvar <- "Cell.Assignment_adj"
+ct_list <- c("HSPC","IMP","NP","MkP","MEP","EP")
+feature <- "ADT.CD9_CLR"
+#feature <- "ADT.CD38_CLR"
+#feature <- "ADT.CD71_CLR"
+p3 = ggplot(CurrObj@meta.data[which((CurrObj@meta.data[[genotype]] == "MUT" | CurrObj@meta.data[[genotype]] == "WT") & (CurrObj$Cell.Assignment_adj %in% ct_list) ),], aes_string(x = xvar, y = feature, fill = genotype)) + 
+geom_boxplot() + 
+labs(title = feature) +
+stat_compare_means(method = "wilcox.test", label = "p.signif", hide.ns = TRUE) + 
+scale_fill_manual(values = c("royalblue1", "firebrick2"),
+breaks = c("WT", "MUT")) + 
+theme_classic(base_size = 17)
+
+##graph DSB normalization
+feature <- "ADT.CD9_DSB"
+#feature <- "ADT.CD38_DSB"
+#feature <- "ADT.CD71_DSB"
+p4 = ggplot(CurrObj@meta.data[which( (CurrObj@meta.data[[genotype]] == "MUT" | CurrObj@meta.data[[genotype]] == "WT") & (CurrObj$Cell.Assignment_adj %in% ct_list) ),], aes_string(x = xvar, y = feature, fill = genotype)) + 
+geom_boxplot() + 
+labs(title = feature) +
+stat_compare_means(method = "wilcox.test", label = "p.signif", hide.ns = TRUE) + 
+scale_fill_manual(values = c("royalblue1", "firebrick2"),
+breaks = c("WT", "MUT")) + 
+theme_classic(base_size = 17)
+
+cowplot::plot_grid(p3, p4, ncol = 2)
+```   
+
+##SUBSETTING ANTIBODIES
+```{r}
+##try to set a cutoff for antibodies 
+colnames(merged.patient.list@meta.data)
+antibodies <- colnames(merged.patient.list@meta.data[68:90])
+merged.patient.list@meta.data%>% 
+group_by(Cell.Assignment_adj) %>% 
+subset(subset = Cell.Assignment_adj == "HSPC"|Cell.Assignment_adj == "IMP"|Cell.Assignment_adj == "NP"|Cell.Assignment_adj == "MkP"|Cell.Assignment_adj == "MEP"|Cell.Assignment_adj == "EP") %>% 
+summarise(Median=median(ADT.CD45_DSB))
+
+##Antibodies that have at least 1 cell type for which > 2 DSB normalization
+cutoff<- list("ADT-CD38","ADT-CD36","ADT-CD47","ADT-CD84","ADT-CD71","ADT-CD99","ADT-CD45")
+```

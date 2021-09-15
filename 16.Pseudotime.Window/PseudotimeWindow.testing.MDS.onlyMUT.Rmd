@@ -1,0 +1,1742 @@
+
+
+```{r}
+library(pheatmap)
+library(Seurat)
+```
+
+```{r}
+junctions.bulk.all <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/6.Comb_patients_2WT/5_read_threshold/MDS_P5_P6/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_and_exon.skipping_info.txt")
+
+junctions.bulk <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/6.Comb_patients_2WT/5_read_threshold/MDS_P5_P6/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+
+junctions.bulk.all[which(junctions.bulk.all$gene =="SEPT2"),]
+junctions.bulk[which(junctions.bulk$gene =="SEPT2"),]
+
+junctions.bulk.all[which(junctions.bulk.all$gene == "CASP8"),]
+
+junctions.bulk.sub
+```
+
+```{r}
+#Exon skip 
+
+junctions.mep.all <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/MDS_P5_P6/MEP/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_info.txt")
+
+junctions.mep.all[which(junctions.mep.all$gene == "CASP8"),]
+chr2:201272942:201276826:+
+```
+
+
+
+##Collection junctions of interest
+```{r}
+##HSPC specific cryptic junctions:
+junctions.hspc <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/MDS_P5_P6/HSPC/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+##IMP specific cryptic junctions:
+junctions.imp <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/MDS_P5_P6/IMP/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+junctions.mkp <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/MDS_P5_P6/MkP/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+##MEP specific cryptic junctions:
+junctions.mep <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/MDS_P5_P6/MEP/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+##EP specific cryptic junctions:
+junctions.ep <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/MDS_P5_P6/EP/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+junctions.np <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/MDS_P5_P6/NP/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+junctions.bulk <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/6.Comb_patients_2WT/5_read_threshold/MDS_P5_P6/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+
+p.val.thresh <- 0.05
+dPSI.val <- 2
+read.thresh <- 5
+
+junctions.hspc.sub <- junctions.hspc[which(junctions.hspc$pvalue <= p.val.thresh & junctions.hspc$dPSI >= dPSI.val &  junctions.hspc$three.mut.cluster.cov >= read.thresh & junctions.hspc$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.hspc.sub) <- junctions.hspc.sub$intron_junction
+
+junctions.imp.sub <- junctions.imp[which(junctions.imp$pvalue <= p.val.thresh & junctions.imp$dPSI >= dPSI.val & junctions.imp$three.mut.cluster.cov >= read.thresh & junctions.imp$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.imp.sub) <- junctions.imp.sub$intron_junction
+
+junctions.mkp.sub <- junctions.mkp[which(junctions.mkp$pvalue <= p.val.thresh & junctions.mkp$dPSI >= dPSI.val & junctions.mkp$three.mut.cluster.cov >= read.thresh & junctions.mkp$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.mkp.sub) <- junctions.mkp.sub$intron_junction
+
+junctions.mep.sub <- junctions.mep[which(junctions.mep$pvalue <= p.val.thresh & junctions.mep$dPSI >= dPSI.val & junctions.mep$three.mut.cluster.cov >= read.thresh & junctions.mep$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.mep.sub) <- junctions.mep.sub$intron_junction
+
+junctions.ep.sub <- junctions.ep[which(junctions.ep$pvalue <= p.val.thresh & junctions.ep$dPSI >= dPSI.val & junctions.ep$three.mut.cluster.cov >= read.thresh & junctions.ep$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.ep.sub) <- junctions.ep.sub$intron_junction
+
+junctions.np.sub <- junctions.np[which(junctions.np$pvalue <= p.val.thresh & junctions.np$dPSI >= dPSI.val & junctions.np$three.mut.cluster.cov >= read.thresh & junctions.np$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.np.sub) <- junctions.np.sub$intron_junction
+
+junctions.bulk.sub <- junctions.bulk[which(junctions.bulk$pvalue <= p.val.thresh & junctions.bulk$dPSI >= dPSI.val & junctions.bulk$three.mut.cluster.cov >= read.thresh & junctions.bulk$three.wt.cluster.cov >= read.thresh ),]
+rownames(junctions.bulk.sub) <- junctions.bulk.sub$intron_junction
+
+
+junctions.hspc.list <- paste(junctions.hspc.sub$intron_junction)
+junctions.imp.list <- paste(junctions.imp.sub$intron_junction)
+junctions.mkp.list <- paste(junctions.mkp.sub$intron_junction)
+junctions.mep.list <- paste(junctions.mep.sub$intron_junction)
+junctions.ep.list <- paste(junctions.ep.sub$intron_junction)
+junctions.np.list <- paste(junctions.np.sub$intron_junction)
+junctions.bulk.list <- paste(junctions.bulk.sub$intron_junction)
+
+
+
+junctions.hspc.list.final <- paste0(junctions.hspc.sub$gene,":",junctions.hspc.sub$intron_junction)
+junctions.imp.list.final <- paste0(junctions.imp.sub$gene,":",junctions.imp.sub$intron_junction)
+junctions.mkp.list.final <- paste0(junctions.mkp.sub$gene,":",junctions.mkp.sub$intron_junction)
+junctions.mep.list.final <- paste0(junctions.mep.sub$gene,":",junctions.mep.sub$intron_junction)
+junctions.ep.list.final <- paste0(junctions.ep.sub$gene,":",junctions.ep.sub$intron_junction)
+junctions.np.list.final <- paste0(junctions.np.sub$gene,":",junctions.np.sub$intron_junction)
+junctions.bulk.list.final <- paste0(junctions.bulk.sub$gene,":",junctions.bulk.sub$intron_junction)
+
+
+length(junctions.hspc.list)
+length(junctions.imp.list)
+length(junctions.mkp.list)
+length(junctions.mep.list)
+length(junctions.ep.list)
+length(junctions.np.list)
+length(junctions.bulk.list)
+
+
+
+##Generating junction list Junctions significant in ery lineage cts
+junctions.of.interest <- Reduce(union, list(junctions.hspc.list, junctions.mep.list, junctions.ep.list, junctions.mkp.list)) 
+
+junctions.of.interest.final <- Reduce(union, list(junctions.hspc.list.final, junctions.mep.list.final, junctions.ep.list.final, junctions.mkp.list.final)) 
+
+
+#MDS.junctions.dPSI.2.sig.5.read.thresh <- junctions.of.interest.final
+#MDS.junctions.dPSI.0.sig.5.read.thresh <- junctions.of.interest.final
+
+gene.list <- unique(unlist(lapply(strsplit(junctions.of.interest.final,split= ":"), "[",1)))
+
+save(gene.list, junctions.of.interest,junctions.of.interest.final, version=2, file="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/junctions.to.use.MDS.full.ct.sub.Rdata")
+
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/junctions.to.use.MDS.full.ct.sub.Rdata")
+
+##Generating junction list Junctions significant in all cell type
+junctions.of.interest <- Reduce(union, list(junctions.hspc.list, junctions.imp.list, junctions.mep.list, junctions.ep.list, junctions.mkp.list,junctions.np.list)) 
+
+junctions.of.interest.final <- Reduce(union, list(junctions.hspc.list.final, junctions.imp.list.final, junctions.mep.list.final, junctions.ep.list.final, junctions.mkp.list.final, junctions.np.list.final)) 
+
+gene.list <- unique(unlist(lapply(strsplit(junctions.of.interest.final,split= ":"), "[",1)))
+
+#save(gene.list, junctions.of.interest,junctions.of.interest.final, version=2, file="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/junctions.to.use.MDS.full.ct.all.Rdata")
+
+save(gene.list, junctions.of.interest,junctions.of.interest.final, version=2, file="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/junctions.to.use.MDS.noSigThresh.ct.sub.Rdata")
+
+
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/junctions.to.use.MDS.noSigThresh.ct.sub.Rdata")
+length(junctions.of.interest.final)
+```
+
+
+```{r}
+gene <- "SEPT2"
+junctions.hspc[which(junctions.hspc$gene == gene),]
+junctions.mkp[which(junctions.mkp$gene == gene),]
+junctions.mep[which(junctions.mep$gene == gene),]
+junctions.ep[which(junctions.ep$gene == gene),]
+junctions.bulk[which(junctions.bulk$gene == gene),]
+junctions.imp[which(junctions.imp$gene == gene),]
+#junctions.np[which(junctions.np$gene == gene),]
+
+
+#FeaturePlot(mds.samples.integrated, features = gene)
+```
+
+
+```{r}
+annotation_row = data.frame(cryptic.junctions.full=junctions.of.interest.final)
+
+rownames(annotation_row) <- annotation_row$cryptic.junctions.full
+
+annotation_row$EP <- 0
+annotation_row$MEP <- 0
+annotation_row$MkP <- 0
+annotation_row$HSPC <- 0
+#annotation_row$IMP <- 0
+#annotation_row$NP <- 0
+
+annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.hspc.list.final),]$HSPC <- 1
+#annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.imp.list.final),]$IMP <- 1
+annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.mep.list.final),]$MEP <- 1
+annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.ep.list.final),]$EP <- 1
+annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.mkp.list.final),]$MkP <- 1
+#annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.np.list.final),]$NP <- 1
+
+#annotation_row$cell.type.site <- factor(annotation_row$cell.type.site, c("HSPC","IMP","MEP","EP"))
+annotation_row <- annotation_row[-1]
+annotation_row
+
+annotation_row$sum <- rowSums(annotation_row)
+
+all.examples <- rownames(annotation_row[which(annotation_row$sum > 0),])
+pan.examples <- rownames(annotation_row[which(annotation_row$sum >=3),])
+unique.examples <- rownames(annotation_row[which(annotation_row$sum == 1),])
+
+#ep.unique.examples <- rownames(annotation_row[which(annotation_row$sum == 1 & annotation_row$EP ==1),])
+
+ann_colors = list(
+  #NP = c("light grey","red"),
+  #IMP = c("light grey","red"),
+  HSPC = c("light grey","red"),
+  MkP = c("light grey","red"),
+  MEP = c("light grey","red"),
+  EP = c("light grey","red")
+)
+
+annotation_row
+annotation_row[which(annotation_row$sum >0),]
+
+```
+
+
+```{r}
+#unique.examples
+#pan.examples
+
+length(all.examples)
+nrow(annotation_row)
+length(unique.examples)
+length(pan.examples)
+
+```
+
+
+
+## ----------- After running junctions through pipeline ----------- ##
+
+
+##Output from MDSP5+MDSP6 and window size of 300
+```{r}
+
+#load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/MDSP5.MDSP6.merged.info.sig.in.any.bucket.300.usingCITE.ct.sub.Rdata")
+
+#load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/MDSP5.MDSP6.merged.info.sig.in.any.bucket.400.usingCITE.ct.sub.Rdata")
+
+
+#load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/MDSP5.MDSP6.merged.info.no.sig.thresh.bucket.300.usingCITE.ct.sub.Rdata")
+
+
+#load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/MDSP5.MDSP6.merged.info.no.sig.thresh.bucket.200.usingCITE.ct.sub.onlyMut.Rdata")
+
+
+#load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/MDSP5.MDSP6.merged.info.no.sig.thresh.bucket.200.usingCITE.ct.sub.onlyMut.wCTcounts.Rdata")
+
+
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/MDSP5.MDSP6.merged.info.no.sig.thresh.bucket.300.usingCITE.ct.sub.onlyMut.wCTcounts.Rdata")
+
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/MDSP5.MDSP6.merged.info.no.sig.thresh.bucket.300.usingCITE.all.markers.ct.sub.onlyMut.wCTcounts.Rdata")
+
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/MDSP5.MDSP6.merged.info.no.sig.thresh.bucket.400.usingCITE.ct.sub.onlyMut.wCTcounts.Rdata")
+
+
+rownames <- junctions.of.interest.final
+
+extracted_cols <- lapply(win.mutpsi, function(x) x[,"mut.psi"]) #note the added comma!
+mut.psi.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(mut.psi.per.window) = as.character(1:ncol(mut.psi.per.window))
+rownames(mut.psi.per.window) <- rownames
+
+extracted_cols <- lapply(win.mutpsi, function(x) x[,"mut.bulk.counts"]) 
+mut.counts.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(mut.counts.per.window) = as.character(1:ncol(mut.counts.per.window))
+rownames(mut.counts.per.window) <- rownames
+
+extracted_cols <- lapply(win.mutpsi, function(x) x[,"cluster.cov.mut"]) #note the added comma!
+cluster.cov.mut.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(cluster.cov.mut.per.window) = as.character(1:ncol(cluster.cov.mut.per.window))
+rownames(cluster.cov.mut.per.window) <- rownames
+
+mut.psi.per.window.zscore <- as.data.frame(t(scale(t(mut.psi.per.window))))
+mut.psi.per.window
+```
+
+
+```{r}
+mds.mut.psi.per.window <- mut.psi.per.window
+
+mds.mut.psi.per.window.8 <- mds.mut.psi.per.window
+```
+
+
+##grabbing ct type specific count data 
+
+```{r}
+win.mutpsi[1]
+win.ct.counts[[1]][junction,]
+win.ct.counts[[2]][junction,]
+win.ct.counts[[3]][junction,]
+```
+
+```{r}
+junction <- "chr7:80661210:80662972:+" 
+gene <- "CD36"
+
+
+junction <- "chr1:161167486:161168412:+" 
+gene <- "PPOX"
+
+junction <- "chr14:74889349:74889877:+" 
+gene <- "DLST"
+
+junction <- "chr4:144116976:144119685:-" 
+gene <- "GYPA"
+
+junction <- "chr1:100992754:100995109:-" 
+gene <- "DPH5"
+
+junction.final <- paste0(gene,":",junction)
+
+```
+
+```{r}
+length(junctions.of.interest.final)
+```
+
+
+
+
+
+##Load in the seurat object to use 
+```{r}
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/4.Integrated_seurat_objs/mds.sample.integrated.p4.5.6.in.progress_2_withPseudotime.RData")
+
+mds.samples.integrated <- seurat
+
+mds.samples.integrated
+```
+
+```{r}
+gene <- "SF3B1"
+junctions.hspc[which(junctions.hspc$gene == gene),]
+junctions.imp[which(junctions.imp$gene == gene),]
+junctions.mkp[which(junctions.mkp$gene == gene),]
+junctions.mep[which(junctions.mep$gene == gene),]
+junctions.ep[which(junctions.ep$gene == gene),]
+#junctions.np[which(junctions.np$gene == gene),]
+
+FeaturePlot(mds.samples.integrated, features = gene)
+```
+
+
+
+
+## ------------------------------------------ Generating heatmaps ------------------------------------------ ##
+
+
+
+```{r}
+shared.junctions <- intersect(junctions.of.interest.final, rownames(mut.psi.per.window))
+length(shared.junctions)
+
+
+annotation_row$mutpsi.exp.corr <- NA
+
+
+for (junction in shared.junctions){
+  gene.name <- unlist(strsplit(junction,split= ":"), "[",1)[1]
+  #print(junction)
+  #print(gene.name)
+  
+  if (gene.name %in% rownames(ont.mut.expression.per.window)){
+    psi.data <- as.data.frame(t(mut.psi.per.window))[,junction]
+    exp.data <- as.data.frame(t(ont.mut.expression.per.window))[,gene.name]
+    annotation_row[junction,]$mutpsi.exp.corr <- round(cor(psi.data, exp.data, method = c("spearman") ), 4)
+    
+  }
+
+}
+
+annotation_row
+annotation_row %>% arrange(desc(mutpsi.exp.corr))
+```
+
+
+
+```{r}
+annotation_row$corr.class <- 0.5
+annotation_row[which(annotation_row$mutpsi.exp.corr >= 0.5),]$corr.class <- 1
+annotation_row[which(annotation_row$mutpsi.exp.corr < 0 & annotation_row$mutpsi.exp.corr > -0.5),]$corr.class <- -0.5
+annotation_row[which(annotation_row$mutpsi.exp.corr <= -0.5),]$corr.class <- -1
+
+annotation_row$corr.class.2 <- 0
+annotation_row[which(annotation_row$mutpsi.exp.corr >= 0.5),]$corr.class.2 <- 1
+annotation_row[which(annotation_row$mutpsi.exp.corr <= -0.5),]$corr.class.2 <- -1
+
+table(annotation_row$corr.class)
+table(annotation_row[which(annotation_row$sum >0),]$corr.class)
+annotation_row
+```
+
+
+##Add to annotation_row:
+#1. Delta value for change in exp (should it be first 2 and last 2 windows? Or between lowest and highest window?)
+#2. Dleta value for change in psi across window
+#3. Average coverage across windows value
+#4. NMD verdict 
+#5. distance of cryptic site 
+#6. Fishers?
+
+
+
+
+
+```{r}
+library(gtools)
+annotation_row$junction <- rownames(annotation_row)
+
+#annotation_row
+#mut.psi.per.window
+#ont.mut.expression.per.window
+
+
+##Preparing NMD.info
+nmd.info <- read.csv("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info_w_NMD_faster_with_start_codon_correction.csv")
+
+nmd.info$gene.and.junc <- paste0( nmd.info$gene,":",nmd.info$intron_junction)
+nmd.genes <- unique(nmd.info[which(nmd.info$NMDVerdict == "NMD"),]$gene)
+length(nmd.genes)
+
+length(unique(nmd.info$gene))
+length(setdiff(unique(nmd.info$gene),nmd.genes))
+
+#Addingin new columns 
+annotation_row$psi.range <- NA
+annotation_row$psi.diff <- NA
+annotation_row$psi.log2fc <- NA
+#annotation_row$psi.fishers <- NA
+annotation_row$exp.range <- NA
+annotation_row$exp.diff <- NA
+annotation_row$exp.log2fc <- NA
+annotation_row$avg.cov <- NA
+annotation_row$NMD.junction.verdict <- NA
+annotation_row$NMD.gene.verdict <- NA
+#annotation_row$NMD.gene.verdict <- "not NMD gene"
+annotation_row$threeprime_distance <- NA
+
+shared.junctions <- intersect(junctions.of.interest.final, rownames(mut.psi.per.window))
+num.windows <- ncol(mut.psi.per.window)
+
+for (junction in shared.junctions){
+  #junction <- "MTRF1L:chr6:152991416:152992856:-"
+  annotation_row[junction,]$psi.range <- max(as.numeric(paste(mut.psi.per.window[junction,])))-min(as.numeric(paste(mut.psi.per.window[junction,])))
+  
+  first2.avg <- mean(c(mut.psi.per.window[junction,1], mut.psi.per.window[junction,2]))
+  last2.avg <- mean(c(mut.psi.per.window[junction,(num.windows-1)], mut.psi.per.window[junction,num.windows]))
+  
+  annotation_row[junction,]$psi.diff <- last2.avg-first2.avg
+  annotation_row[junction,]$psi.log2fc <- log2(last2.avg/first2.avg)
+  
+  gene <- unlist(strsplit(junction,split= ":"))[[1]]
+  if (gene %in% rownames(ont.mut.expression.per.window)){
+    
+    annotation_row[junction,]$exp.range <- max(as.numeric(paste(ont.mut.expression.per.window[gene,])))-min(as.numeric(paste(ont.mut.expression.per.window[gene,])))
+    
+    first2.avg <- mean(c(ont.mut.expression.per.window[gene,1], ont.mut.expression.per.window[gene,2]))
+    last2.avg <- mean(c(ont.mut.expression.per.window[gene,(num.windows-1)], ont.mut.expression.per.window[gene,num.windows]))
+    
+    annotation_row[junction,]$exp.diff <- last2.avg-first2.avg
+    annotation_row[junction,]$exp.log2fc <- log2(last2.avg/first2.avg)
+    
+  }
+  
+  annotation_row[junction,]$avg.cov <- mean(unlist(cluster.cov.mut.per.window[junction,]))
+  
+  
+  if (junction %in% nmd.info$gene.and.junc ){
+    annotation_row[junction,]$NMD.junction.verdict <- paste(nmd.info[which(nmd.info$gene.and.junc == junction),]$NMDVerdict)
+    gene <- unlist(lapply(strsplit(junction,split= ":"), "[",1))
+    if(gene %in% nmd.genes){
+      annotation_row[junction,]$NMD.gene.verdict <- "NMD gene"
+    } else {
+      annotation_row[junction,]$NMD.gene.verdict <- "not NMD gene"
+    }
+    
+    annotation_row[junction,]$threeprime_distance <- nmd.info[which(nmd.info$gene.and.junc == junction),]$threep_distance
+  }
+
+}
+
+```
+
+
+
+```{r}
+gene <- "HSH2D"
+junctions.hspc[which(junctions.hspc$gene == gene),]
+junctions.imp[which(junctions.imp$gene == gene),]
+junctions.mkp[which(junctions.mkp$gene == gene),]
+junctions.mep[which(junctions.mep$gene == gene),]
+junctions.ep[which(junctions.ep$gene == gene),]
+#junctions.np[which(junctions.np$gene == gene),]
+
+#FeaturePlot(mds.samples.integrated, features = gene)
+```
+
+##Not sure about these NMD verdicts
+```{r}
+
+annotation_row[which(annotation_row$junction == "STX4:chr16:31034114:31034203:+" ),]$NMD.junction.verdict <- NA
+annotation_row[which(annotation_row$junction == "STX4:chr16:31034114:31034203:+" ),]$NMD.gene.verdict <- NA
+#annotation_row[which(annotation_row$junction == "DUSP12:chr1:161750145:161751654:+" ),]$NMD.verdict.adj <- NA
+annotation_row[which(annotation_row$junction == "FKBP8:chr19:18532814:18533269:-" ),]$NMD.junction.verdict <- NA
+annotation_row[which(annotation_row$junction == "FKBP8:chr19:18532814:18533269:-" ),]$NMD.gene.verdict <- NA
+
+#annotation_row[which(annotation_row$junction == "PHC3:chr3:170171464:170172556:-" ),]$NMD.verdict.adj <- NA
+annotation_row[which(annotation_row$junction == "PHC3:chr3:170171464:170172556:-" ),]$NMD.junction.verdict <- NA
+annotation_row[which(annotation_row$junction == "PHC3:chr3:170171464:170172556:-" ),]$NMD.gene.verdict <- NA
+
+annotation_row["AP1G2:chr14:23564221:23564332:-",]$NMD.junction.verdict <- NA
+annotation_row["AP1G2:chr14:23564221:23564332:-",]$NMD.gene.verdict <- NA
+#annotation_row["AP1G2:chr14:23564221:23564332:-",]
+
+annotation_row[which(is.na(annotation_row$NMD.junction.verdict)),]$NMD.junction.verdict <- "NA"
+annotation_row[which(is.na(annotation_row$NMD.gene.verdict)),]$NMD.gene.verdict <- "NA"
+```
+
+
+
+```{r}
+mds.annotation_row.8 <- annotation_row
+```
+
+
+```{r}
+annotation_row[which(annotation_row$sum > 0),]
+annotation_row[which(annotation_row$NMD.junction.verdict == "NA"),]
+```
+
+
+
+```{r}
+ann_colors = list(
+  #NP = c("light grey","red"),
+  #IMP = c("light grey","red"),
+  #HSPC = c("light grey","red"),
+  #MkP = c("light grey","red"),
+  #MEP = c("light grey","red"),
+  #EP = c("light grey","red"),
+  corr.class = c("orange","#ffe4b3","plum", "purple")
+  #NMD.verdict = c( "NMD" = "orange","not NMD"= "purple")
+)
+#, "NA" = "grey"
+```
+
+
+
+##Collapsing all the CITEseq mean values
+
+```{r}
+library(reshape2)
+cite.expression.mean
+
+extracted_cols <- lapply(cite.expression.mean, function(x) x["ADT.CD71"]) #note the added comma!
+ADT.CD71.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+ADT.CD71.per.window
+
+extracted_cols <- lapply(cite.expression.mean, function(x) x["ADT.CD36"]) #note the added comma!
+ADT.CD36.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+
+extracted_cols <- lapply(cite.expression.mean, function(x) x["ADT.CD99"]) #note the added comma!
+ADT.CD99.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+
+extracted_cols <- lapply(cite.expression.mean, function(x) x["ADT.CD38"]) #note the added comma!
+ADT.CD38.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+
+ADT.CD71.per.window
+ADT.CD36.per.window
+ADT.CD99.per.window
+ADT.CD38.per.window
+
+```
+
+
+```{r fig.height=0.8, fig.width=25}
+
+pheatmap(ADT.CD71.per.window, cluster_cols = F, cluster_rows = F, color=colorRampPalette(c("white","dark green" ))(50),legend=F)
+
+pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/heatmap/mean.CD36.expression.per.bin.mut.only.300.pdf", width = 20, height = 0.8)
+pheatmap(ADT.CD36.per.window, cluster_cols = F, cluster_rows = F, color=colorRampPalette(c("white","dark green" ))(50),legend=F, show_colnames= F)
+dev.off()
+
+pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/heatmap/mean.CD99.expression.per.bin.mut.only.300.pdf", width = 20, height = 0.8)
+pheatmap(ADT.CD99.per.window, cluster_cols = F, cluster_rows = F, color=colorRampPalette(c("white","dark green" ))(50),legend=F, show_colnames= F)
+dev.off()
+
+pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/heatmap/mean.CD38.expression.per.bin.mut.only.300.pdf", width = 20, height = 0.8)
+pheatmap(ADT.CD38.per.window, cluster_cols = F, cluster_rows = F, color=colorRampPalette(c("white","dark green" ))(50),legend=F, show_colnames= F)
+dev.off()
+```
+
+
+
+```{r fig.height=0.8, fig.width=25}
+
+pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/heatmap/mean.CD71.expression.per.bin.mut.only.300.pdf", width = 20, height = 0.8)
+pheatmap(t(annotation_col[,5]), cluster_cols = F, cluster_rows = F, color=colorRampPalette(c("white","dark green" ))(50),legend=F)
+dev.off()
+
+
+pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/heatmap/mut.frac.per.bin.pdf", width = 20, height = 0.8)
+pheatmap(t(annotation_col[,6]), cluster_cols = F, cluster_rows = F, color=colorRampPalette(c("white", "#9370DB"))(50), legend=F)
+#pheatmap(t(annotation_col[,9]), cluster_cols = F, cluster_rows = F, color=colorRampPalette(c("white", "#9370DB"))(50), legend=F)
+dev.off()
+
+```
+
+##Adding Annotation Colors 
+```{r fig.height=1, fig.width=10}
+
+#annotation_col = data.frame(ep.fraction = as.numeric(paste(ct.fractions.2["EP",])), mep.fraction = as.numeric(paste(ct.fractions.2["MEP",])), imp.fraction = as.numeric(paste(ct.fractions.2["IMP",])) ,hsc.fraction = as.numeric(paste(ct.fractions.2["HSPC",])),  mean.pseudotime = pseudotime.mean, mut.frac= mut.fraction)
+
+#Only using some celltypes
+annotation_col = data.frame(ep.fraction = as.numeric(paste(ct.fractions.2["EP",])), 
+                            mep.fraction = as.numeric(paste(ct.fractions.2["MEP",])),
+                            mkp.fraction = as.numeric(paste(ct.fractions.2["MkP",])),
+                            hsc.fraction = as.numeric(paste(ct.fractions.2["HSPC",])),
+                            mean.CD71.exp = ADT.CD71.per.window)
+
+annotation_col
+
+rownames(annotation_col) = paste(1:nrow(annotation_col))
+
+cell.freq <- melt(t(annotation_col[,1:4]),var=c("CellType",'window'))
+mycolors <- c("#980043","#4B0082","#DD3497","#313695")
+
+
+#cell.freq <- melt(t(annotation_col[,1:7]),var=c("CellType",'window'))
+#mycolors <- c("#980043","#4B0082","#DD3497","#313695","#045A8D","#006D2C","lightskyblue4")
+
+
+pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/heatmap/perc.ct.per.bin.mut.only.400.pdf", width = 20, height = 2)
+ggplot(cell.freq, aes(x = window, y = value, fill = CellType)) + geom_col(position = "fill") + scale_fill_manual(values=mycolors) + theme_void() + theme(legend.key.size = unit(0.5, 'cm'), #change legend key size
+        legend.key.height = unit(0.5, 'cm'), #change legend key height
+        legend.key.width = unit(0.5, 'cm'), #change legend key width
+        legend.title = element_text(size=10), #change legend title font size
+        legend.text = element_text(size=8)) #change legend text font size
+dev.off()
+
+```
+
+
+```{r}
+annotation_row[which(annotation_row$sum >0 &annotation_row$NMD.junction.verdict == "not NMD" & annotation_row$NMD.gene.verdict =="not NMD gene"),]
+
+table(annotation_row[which(annotation_row$sum >0 &annotation_row$NMD.junction.verdict == "not NMD" & annotation_row$NMD.gene.verdict =="not NMD gene"),]$corr.class)
+
+table(annotation_row[which(annotation_row$sum >0 &annotation_row$avg.cov >= 10 &annotation_row$NMD.junction.verdict == "not NMD" & annotation_row$NMD.gene.verdict =="not NMD gene" & abs(annotation_row$exp.log2fc) >= 0.2),]$corr.class)
+
+
+table(annotation_row[which(annotation_row$sum >0 &annotation_row$avg.cov >= 10 &annotation_row$NMD.junction.verdict == "not NMD" & annotation_row$NMD.gene.verdict =="not NMD gene" & abs(annotation_row$exp.log2fc) >= 0.5),]$corr.class)
+```
+
+
+
+```{r}
+read.cov <- 5 
+psi.thresh <- 5
+fc.thresh <- 0.2
+
+annotation_row[which(annotation_row$sum >0 &annotation_row$avg.cov >= read.cov & abs(annotation_row$psi.diff) >= psi.thresh & abs(annotation_row$exp.log2fc) >= fc.thresh),]
+
+annotation_row[which(annotation_row$sum >0 &annotation_row$avg.cov >= read.cov & abs(annotation_row$psi.diff) >= psi.thresh & abs(annotation_row$exp.log2fc) >= fc.thresh & annotation_row$NMD.junction.verdict == "not NMD" & annotation_row$NMD.gene.verdict =="not NMD gene"),]
+
+
+annotation_row[which(annotation_row$sum >0 &annotation_row$avg.cov >= read.cov & abs(annotation_row$psi.diff) >= psi.thresh & abs(annotation_row$exp.log2fc) >= fc.thresh & annotation_row$NMD.junction.verdict == "not NMD" & annotation_row$NMD.gene.verdict =="NMD gene"),]
+
+annotation_row[which(annotation_row$sum >0 &annotation_row$avg.cov >= read.cov & abs(annotation_row$psi.diff) >= psi.thresh & abs(annotation_row$exp.log2fc) >= fc.thresh & annotation_row$NMD.junction.verdict == "NMD" & annotation_row$NMD.gene.verdict =="NMD gene"),]
+```
+
+
+```{r}
+rownames(to.plot.reordered) <- make.names(unlist(lapply(strsplit(rownames(to.plot.reordered),split= ":"), "[",1)), unique =TRUE)
+make.names(unlist(lapply(strsplit(rownames(to.plot.reordered),split= ":"), "[",1)), unique =TRUE)
+
+to.plot.reordered
+annotation_row.sub
+```
+
+
+
+#Instead of comparing the first 2 buckets - take the range, so difference between the highest and lowest values 
+
+```{r}
+psi.range <- 5
+#annotation_row[which(annotation_row$sum >0 &annotation_row$psi.range >= psi.range ),]
+
+table(annotation_row[which(annotation_row$sum >0 & annotation_row$psi.range >= psi.range & annotation_row$NMD.junction.verdict == "NMD" ),]$corr.class)
+table(annotation_row[which(annotation_row$sum >0 & annotation_row$psi.range >= psi.range & annotation_row$NMD.junction.verdict == "not NMD" ),]$corr.class)
+
+#psi.range <- 5
+#total = 41
+#p-value = 0.0278
+```
+
+
+
+```{r}
+annotation_row
+```
+
+
+```{r}
+ggplot(annotation_row, aes(x=exp.range)) + geom_density()
+
+median(annotation_row[which(!is.na(annotation_row$exp.range)),]$exp.range)
+mad(annotation_row[which(!is.na(annotation_row$exp.range)),]$exp.range)*3
+
+median(annotation_row[which(!is.na(annotation_row$exp.range)),]$exp.range) + mad(annotation_row[which(!is.na(annotation_row$exp.range)),]$exp.range)
+
+median(annotation_row$psi.range)
+
+
+```
+
+
+```{r}
+median(annotation_row[which(!is.na(annotation_row$exp.range)),]$exp.range)
+median(annotation_row$psi.range)
+```
+
+```{r}
+exp.range <- median(annotation_row[which(!is.na(annotation_row$exp.range)),]$exp.range)
+psi.range <- median(annotation_row$psi.range)
+
+exp.range <- 0.09
+psi.range <- 4
+annotation_row[which(annotation_row$sum >0 &annotation_row$psi.range >= psi.range & annotation_row$exp.range >= exp.range ),]
+
+table(annotation_row[which(annotation_row$sum >0 & annotation_row$psi.range >= psi.range & annotation_row$exp.range >= exp.range & annotation_row$NMD.junction.verdict == "NMD" ),]$corr.class)
+table(annotation_row[which(annotation_row$sum >0 & annotation_row$psi.range >= psi.range & annotation_row$exp.range >= exp.range & annotation_row$NMD.junction.verdict == "not NMD" ),]$corr.class)
+
+
+#psi.range <- 3.782073
+#exp.range <- 0.08982481
+#total = 35
+#p-value = 0.0293
+
+```
+
+
+
+```{r}
+#Things we kept
+##BAX, SEPT2, ITGB2, SLTM, UROD, STAU1, ERGIC3, HIF1A, CD36 , DLST, METTL17, BTK, PPOX, 
+
+
+#GATA1 - psi.diff of 1.2 
+```
+
+
+```{r}
+annotation_row[which(annotation_row$sum >0),]
+
+mds.heatmap.junction.list.full <- rownames(annotation_row[which(annotation_row$sum >0),])
+mds.heatmap.junction.list.sub <- rownames(annotation_row[which(annotation_row$sum >0 & annotation_row$psi.range >= 2 & annotation_row$avg.cov >= 10),])
+
+setdiff(mds.heatmap.junction.list.full, mds.heatmap.junction.list.sub)
+
+
+length(mds.heatmap.junction.list.sub)
+```
+
+
+```{r}
+junction.final <- "CD36:chr7:80672040:80672754:+"
+```
+
+```{r}
+to.plot
+annotation_row.sub
+```
+
+
+```{r fig.height=20, fig.width=12}
+#shared.junctions <- intersect(junctions.of.interest.final, rownames(dPSI.per.window.sub))
+
+##Ordering it by z-score
+#to.plot <- mut.psi.per.window
+to.plot <- mut.psi.per.window.zscore[rownames(mut.psi.per.window.zscore) %in% all.examples,]
+to.plot <- mut.psi.per.window.zscore[rownames(mut.psi.per.window.zscore) %in% unique.examples,]
+
+#junctions.sub <- rownames(annotation_row[which(annotation_row$sum >0 & !is.na(annotation_row$NMD.verdict.adj) & annotation_row$avg.cov >= 10),])
+
+junctions.sub <- rownames(annotation_row[which(annotation_row$sum >0 & annotation_row$psi.range >= 2 & annotation_row$avg.cov >= 10),])
+
+junctions.sub <- rownames(annotation_row[which(annotation_row$sum >0 &annotation_row$avg.cov >= 5 & abs(annotation_row$psi.diff) >= 5 & abs(annotation_row$exp.log2fc) >= 0.2 & annotation_row$NMD.junction.verdict != "NA"),])
+
+
+
+
+#junctions.sub <- rownames(annotation_row[which(annotation_row$sum >0 &annotation_row$avg.cov >= 50 & abs(annotation_row$psi.log2fc) > 0.5 & abs(annotation_row$exp.log2fc) > 0.5 & !is.na(annotation_row$NMD.verdict.adj)),])
+
+#junctions.sub <- rownames(annotation_row[which(annotation_row$threeprime_distance <= -10 & annotation_row$threeprime_distance >=-40 & annotation_row$avg.cov >= 10 & !is.na(annotation_row$NMD.verdict.adj)),])
+
+
+to.plot <- to.plot[junctions.sub,]
+
+##Reordering by highest of each individual bin z-score
+ncols <- ncol(to.plot)
+to.plot$max.column <- colnames(to.plot)[apply(to.plot,1,which.max)]
+to.plot$max.column <- as.numeric(to.plot$max.column)
+to.plot$rownames <- rownames(to.plot)
+to.plot.reordered <- to.plot %>% arrange(max.column)
+rownames(to.plot.reordered) <- to.plot.reordered$rownames
+to.plot.reordered <- to.plot.reordered[,1:ncols]
+to.plot.reordered
+
+##Reordering by highest average of every 2 bin z-scores
+z.score.order <- do.call(cbind, 
+                         lapply(seq(1, ncol(to.plot)-1, 1), function(i){
+                           x <- as.data.frame(rowMeans(to.plot[,i:(i + 1)]))
+                           colnames(x) <- c(paste0(i,".", (i+1)))
+                           x
+                           }))
+
+z.score.order$max.column <- colnames(z.score.order)[apply(z.score.order,1,which.max)]
+z.score.order$max.column <- as.numeric(z.score.order$max.column)
+z.score.order$rownames <- rownames(z.score.order)
+z.score.order <- z.score.order %>% arrange(max.column)
+rownames(z.score.order) <- z.score.order$rownames
+
+
+to.plot.reordered <- to.plot[rownames(z.score.order),]
+#to.plot.reordered
+
+mds.sig.var.junctions
+
+paletteLength <- 50
+myColor <- colorRampPalette(c("navy", "white", "red"))(paletteLength)
+# length(breaks) == length(paletteLength) + 1
+# use floor and ceiling to deal with even/odd length pallettelengths
+myBreaks <- c(seq(min(to.plot.reordered[!is.na(to.plot.reordered)]), 0, length.out=ceiling(paletteLength/2) + 1), 
+              seq(max(to.plot.reordered[!is.na(to.plot.reordered)])/paletteLength, max(to.plot.reordered[!is.na(to.plot.reordered)]), length.out=floor(paletteLength/2)))
+
+annotation_row.sub <- as.data.frame(annotation_row[rownames(to.plot.reordered),c(7,17)])
+#annotation_row.sub <- as.data.frame(annotation_row[rownames(to.plot.reordered),c(18)])
+colnames(annotation_row.sub) <- c("corr.class","NMD.verdict")
+
+rownames(to.plot.reordered) <- make.names(unlist(lapply(strsplit(rownames(to.plot.reordered),split= ":"), "[",1)), unique =TRUE)
+make.names(unlist(lapply(strsplit(rownames(to.plot.reordered),split= ":"), "[",1)), unique =TRUE)
+
+rownames(annotation_row.sub) <- rownames(to.plot.reordered)
+#colnames(annotation_row.sub) <- c("corr.class","NMD.verdict.adj")
+
+
+
+library(pheatmap)
+#pheatmap(to.plot.reordered, cluster_cols = F, cluster_rows = F, annotation_row = annotation_row.sub[-3], annotation_colors = ann_colors, color=myColor, border_color=NA, annotation_legend= T, breaks=myBreaks)
+
+pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/heatmap/MDS.combined.heatmap.mut.psi.variable.400.v1.pdf", width = 20, height = 35)
+pheatmap(to.plot.reordered, cluster_cols = F, cluster_rows = F, annotation_colors = ann_colors, color=myColor, border_color=NA, annotation_legend= T, breaks=myBreaks)
+dev.off()
+
+
+
+annotation_row.sub$gene <- rownames(annotation_row.sub)
+annotation_row.sub.2 <- annotation_row.sub %>% arrange(NMD.verdict)
+rownames(annotation_row.sub.2) <- annotation_row.sub.2$gene
+annotation_row.sub.2 <- annotation_row.sub.2[,-3]
+
+to.plot.reordered.2 <- to.plot.reordered[rownames(annotation_row.sub.2),]
+to.plot.reordered.2
+annotation_row.sub.2
+
+pheatmap(to.plot.reordered.2, cluster_cols = F, cluster_rows = F, annotation_row = annotation_row.sub.2, annotation_colors = ann_colors, color=myColor, border_color=NA, annotation_legend= T, breaks=myBreaks)
+
+pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/heatmap/MDS.combined.heatmap.mut.psi.corr.annotation.withNMD.300.v2.pdf", width = 20, height = 35)
+pheatmap(to.plot.reordered, cluster_cols = F, cluster_rows = F, annotation_row = annotation_row.sub, annotation_colors = ann_colors, color=myColor, border_color=NA, annotation_legend= T, breaks=myBreaks )
+dev.off()
+```
+
+
+
+
+
+
+
+## ------------------------------------------ Looking at Individual Events ------------------------------------------ ##
+
+```{r}
+
+
+junction <- "chr19:55455378:55455635:-" 
+gene <- "ISOC2"
+
+junction <- "chr17:47157140:47157229:-" 
+gene <- "CDC27"
+  
+```
+
+```{r}
+junction <- "chr17:58005617:58005800:-" 
+gene <- "SRSF1"
+
+
+junction <- "chr11:57426389:57426587:-" 
+gene <- "SLC43A3"
+
+junction <- "chr2:85621579:85623625:+" 
+gene <- "USP39"
+
+junction <- "chr14:77737095:77738777:-" 
+gene <- "SNW1"
+
+junction <- "chr1:70246907:70249930:+" 
+gene <- "SRSF11"
+
+
+
+```
+
+
+
+```{r}
+junction <- "chrX:48793297:48793777:+" 
+gene <- "GATA1"
+
+junction <- "chr17:44322552:44322807:-" 
+gene <- "SLC25A39"
+
+#Not well covered
+junction <- "chr14:22768171:22769776:+" 
+gene <- "OXA1L"
+
+#Well covered
+junction <- "chr3:186783639:186784428:+" 
+gene <- "EIF4A2"
+
+#junction <- "chr10:119582608:119588151:-"
+#gene <- "TIAL1"
+
+junction <- "chr4:139072039:139073453:-"
+gene <- "ELF2"
+
+junction <- "chr20:35556271:35556954:+" 
+gene <- "ERGIC3"
+
+#junction <- "chr9:136791424:136791625:+" 
+#gene <- "TMEM141"
+
+junction <- "chr1:100992754:100995109:-" 
+gene <- "DPH5"
+
+junction <- "chr3:170868201:170868297:-" 
+gene <- "RPL22L1"
+
+junction <- "chr11:64232614:64232700:+" 
+gene <- "DNAJC4"
+
+
+junction <- "chr1:45012285:45012856:+" 
+gene <- "UROD"
+
+junction <- "chr19:48960914:48961482:+" 
+gene <- "BAX"
+
+
+junction <- "chr19:16152641:16153031:+" 
+gene <- "HSH2D"
+
+
+junction <- "chr2:197403059:197403584:-" 
+gene <- "SF3B1"
+
+
+junction <- "chr17:7017014:7017256:+" 
+gene <- "C17orf49"
+
+junction <- "chr1:67424322:67424887:-" 
+gene <- "SERBP1"
+
+
+junction <- "chr3:129171280:129171445:-" 
+gene <- "CNBP"
+
+
+junction <- "chr11:8683265:8683989:+" 
+gene <- "RPL27A"
+
+
+junction <- "chr2:169812524:169815476:-" 
+gene <- "METTL5"
+
+
+junction <- "chr13:95725252:95757624:+" 
+gene <- "DNAJC3"
+
+
+
+
+```
+
+
+
+
+```{r}
+junction <- "chr1:67424977:67425082:-" 
+gene <- "SERBP1"
+
+
+junction <- "chr20:35556271:35556954:+" 
+gene <- "ERGIC3"
+
+junction <- "chr20:49124605:49135832:-" 
+gene <- "STAU1"
+
+junction <- "chrX:48793297:48793777:+" 
+gene <- "GATA1"
+
+junction <- "chr7:80672040:80672754:+" 
+gene <- "CD36"
+
+junction <- "chr14:20990598:20992091:+" 
+gene <- "METTL17"
+
+```
+
+
+```{r}
+annotation_row[which(annotation_row$sum > 0),]
+```
+
+
+```{r}
+annotation_row[which(annotation_row$psi.diff >= 10 & annotation_row$avg.cov >=5),]
+```
+
+
+```{r}
+junction <- "chr7:80661210:80662972:+" 
+gene <- "CD36"
+
+junction <- "chr1:161167486:161168412:+" 
+gene <- "PPOX"
+
+junction <- "chr14:74889349:74889877:+" 
+gene <- "DLST"
+
+junction <- "chr4:144116976:144119685:-" 
+gene <- "GYPA"
+
+junction <- "chr1:100992754:100995109:-" 
+gene <- "DPH5"
+
+junction <- "chr14:61695839:61720378:+" 
+gene <- "HIF1A"
+
+junction <- "chr2:241335212:241335958:+" 
+gene <- "SEPT2"
+
+
+```
+
+```{r}
+annotation_row[which(annotation_row$sum >0 &annotation_row$avg.cov >= 25 & abs(annotation_row$psi.log2fc) > 0.7 & abs(annotation_row$exp.log2fc) > 0.7 & !is.na(annotation_row$NMD.verdict.adj)),]
+
+annotation_row[which(annotation_row$avg.cov >= 50 & abs(annotation_row$psi.log2fc) > 0.7 & abs(annotation_row$exp.log2fc) > 0.7 & !is.na(annotation_row$NMD.verdict.adj)),]
+
+
+annotation_row[which(annotation_row$avg.cov >= 20 & abs(annotation_row$psi.diff) >= 10 & abs(annotation_row$exp.log2fc) >= 0.5 & !is.na(annotation_row$NMD.verdict.adj)),]
+
+annotation_row[which(annotation_row$sum > 0 &  annotation_row$avg.cov >= 10 & abs(annotation_row$psi.diff) >= 5 & abs(annotation_row$exp.log2fc) >= 0.2 & !is.na(annotation_row$NMD.verdict.adj)),]
+
+print("NMD sensitive genes")
+table(annotation_row[which(annotation_row$sum >0 & annotation_row$avg.cov >= 10 & abs(annotation_row$psi.diff) >= 5 & abs(annotation_row$exp.log2fc) >= 0.2 & annotation_row$NMD.verdict.adj=="NMD"),]$corr.class)
+
+
+print("NMD insensitive genes")
+table(annotation_row[which(annotation_row$sum >0 & annotation_row$avg.cov >= 10 & abs(annotation_row$psi.diff) >= 10 & abs(annotation_row$exp.log2fc) >= 0.2 & annotation_row$NMD.verdict.adj=="not NMD"),]$corr.class)
+
+#annotation_row$sum >0 & 
+annotation_row
+
+
+to.test <- matrix(c(5,2,1,6),nrow=2,ncol=2)
+
+fisher.test(to.test)
+```
+
+```{r}
+junction <- "chr14:61695839:61720378:+" 
+gene <- "HIF1A"
+
+junction <- "chr14:74889349:74889877:+" 
+gene <- "DLST"
+
+#FALSE CALL
+junction <- "chr5:141938760:141939505:+" 
+gene <- "DELE1"
+
+junction <- "chr3:47334819:47336519:+" 
+gene <- "KLHL18"
+
+junction <- "chr11:93801972:93807500:+" 
+gene <- "MED17"
+
+junction <- "chr6:80040703:80042097:+" 
+gene <- "TTK"
+
+```
+
+##Things highest in the middle 
+```{r}
+to.plot.reordered
+```
+
+```{r}
+##METTL5
+
+junction <- "chr2:169812524:169819560:-" 
+gene <- "METTL5"
+
+junction <- "chr12:56152631:56153851:+" 
+gene <- "MYL6B"
+
+
+junction <- "chr12:56152631:56153851:+" 
+gene <- "MYL4"
+
+
+```
+
+
+
+##not NMD Genes
+```{r}
+##Correlated 
+#decreasing psi
+junction <- "chr14:61695839:61720378:+" 
+gene <- "HIF1A"
+
+#increasing psi
+
+junction <- "chr17:41501386:41502373:-" 
+gene <- "KRT13"
+
+##Anti-correlated
+junction <- "chr11:75268987:75272894:-" 
+gene <- "ARRB1"
+
+```
+
+
+##NMD genes
+```{r}
+##Correlated 
+#decreasing psi
+junction <- "chr14:23564221:23564332:-" 
+gene <- "AP1G2"
+
+#increasing psi
+junction <- "chr7:80661210:80662972:+" 
+gene <- "CD36"
+
+##Anti-correlated
+#decreasing psi
+junction <- "chr7:80672040:80672754:+"
+gene <- "CD36"
+
+#increasing psi
+junction <- "chr21:44910415:44910724:-" 
+gene <- "ITGB2"
+```
+
+
+
+```{r}
+
+junction.final <- paste0(gene,":",junction)
+
+colnames <- c("window","mut.psi","ONT.MUT.Expression")
+psi.per.window.data <- as.data.frame(matrix(nrow=ncol(mut.psi.per.window), ncol=length(colnames)))
+rownames(psi.per.window.data) <- as.character(1:ncol(mut.psi.per.window))
+colnames(psi.per.window.data) <- colnames
+
+psi.per.window.data$window <- rownames(psi.per.window.data)
+psi.per.window.data$mut.psi <- as.numeric(paste(mut.psi.per.window[junction.final,]))
+psi.per.window.data$ONT.MUT.Expression <- as.numeric(paste(ont.mut.expression.per.window[gene,]))
+psi.per.window.data$window <- factor(psi.per.window.data$window,levels = 1:nrow(psi.per.window.data))
+psi.per.window.data
+
+mask <- apply(psi.per.window.data, 2, is.na)
+psi.per.window.data[mask] <- 0
+psi.per.window.data
+```
+
+
+```{r}
+annotation_row[junction.final,]
+```
+
+
+
+```{r}
+
+ExpressionColor <- "red"
+PSIColor <- "steelblue"
+
+OldMax = max(psi.per.window.data$ONT.MUT.Expression)
+OldMin = min(psi.per.window.data$ONT.MUT.Expression)
+OldRange = (OldMax - OldMin)
+
+NewMax = max(psi.per.window.data$mut.psi)
+NewMin = min(psi.per.window.data$mut.psi)
+NewRange = (NewMax - NewMin)
+
+
+#pdf(paste0("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/individual.events/",gene,".mutpsi.vs.mutExpression.pdf"), width = 12, height = 8)
+
+ggplot(psi.per.window.data, aes(x=window, y=mut.psi, group = 1)) + 
+  geom_bar(stat="identity", fill=PSIColor) +
+  geom_line(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed" , color="red") +
+  geom_point(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin),color="red") +
+  scale_y_continuous(
+    name = "mut.psi",
+    #breaks=seq(min(psi.per.window.data$mut.psi), max(psi.per.window.data$mut.psi), length=5),
+    #labels=as.character(round(seq(m, max(psi.per.window.data$mut.psi+m), length=5),2)),
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression of MUT cells \n (average of normalized counts)")) +
+  theme_classic() +
+  labs(x="bin",
+       title = paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction),
+       subtitle = paste0("Spearman Correlation : ", round(cor(psi.per.window.data$mut.psi, psi.per.window.data$ONT.MUT.Expression, method = c("spearman") ), 4))) +
+  theme(plot.title = element_text(vjust = 2.5,hjust = 0.5, size = 17), 
+        axis.title.y = element_text(color =PSIColor , size=15), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=15),
+        plot.subtitle=element_text(size=12, hjust=0.5, face="italic", color="red")) 
+
+#dev.off()
+
+```
+
+
+```{r}
+
+psi.per.window.data
+ExpressionColor <- "red"
+PSIColor <- "steelblue"
+
+m <- floor(min(psi.per.window.data$mut.psi))
+psi.per.window.data$mut.psi <- psi.per.window.data$mut.psi - m
+psi.per.window.data
+
+
+OldMax = max(psi.per.window.data$ONT.MUT.Expression)
+OldMin = min(psi.per.window.data$ONT.MUT.Expression)
+OldRange = (OldMax - OldMin)
+
+NewMax = max(psi.per.window.data$mut.psi)
+NewMin = min(psi.per.window.data$mut.psi)
+NewRange = (NewMax - NewMin)
+
+
+#pdf(paste0("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/individual.events/",gene,".mutpsi.vs.mutExpression.300.pdf"), width = 12, height = 8)
+
+ggplot(psi.per.window.data, aes(x=window, y=mut.psi, group = 1)) + 
+  geom_bar(stat="identity", fill=PSIColor) +
+  geom_line(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed" , color="red") +
+  geom_point(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin),color="red") +
+  scale_y_continuous(
+    name = "mut.psi",
+    breaks=seq(0,50),
+    #labels=seq(m, ceiling(max(psi.per.window.data$mut.psi+m)),length=length(seq(0,10))),
+    labels=(seq(0,50) + m),
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression of MUT cells \n (average of normalized counts)")) +
+  theme_classic() +
+  labs(x="bin",
+       title = paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction),
+       subtitle = paste0("Spearman Correlation : ", round(cor(psi.per.window.data$mut.psi, psi.per.window.data$ONT.MUT.Expression, method = c("spearman") ), 4))) +
+  theme(plot.title = element_text(vjust = 2.5,hjust = 0.5, size = 17), 
+        axis.title.y = element_text(color =PSIColor , size=15), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=15),
+        plot.subtitle=element_text(size=12, hjust=0.5, face="italic", color="red")) 
+
+#dev.off()
+
+#psi.per.window.data$mut.psi <- psi.per.window.data$mut.psi + m
+#psi.per.window.data
+
+```
+
+
+```{r}
+ggplot(psi.per.window.data, aes(x=window, y=mut.psi)) + 
+  geom_bar(stat="identity", fill=PSIColor)+
+  scale_y_continuous(
+    name = "mut.psi",
+    breaks=seq(0,50),
+    #labels=seq(m, ceiling(max(psi.per.window.data$mut.psi+m)),length=length(seq(0,10))),
+    labels=(seq(0,50) + m))+
+  theme_classic() +
+  labs(x="bin",
+       title = paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction)) +
+  theme(plot.title = element_text(vjust = 2.5,hjust = 0.5, size = 17), 
+        axis.title.y = element_text(color =PSIColor , size=15))
+```
+
+
+
+
+
+```{r}
+rownames <- junctions.of.interest.final
+
+##HSPC
+extracted_cols <- lapply(win.ct.counts, function(x) x[,"HSPC.mut.bulk.counts"]) #note the added comma!
+HSPC.mut.bulk.counts.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(HSPC.mut.bulk.counts.per.window) = as.character(1:ncol(HSPC.mut.bulk.counts.per.window))
+rownames(HSPC.mut.bulk.counts.per.window) <- rownames
+
+extracted_cols <- lapply(win.ct.counts, function(x) x[,"HSPC.cluster.cov.mut"]) #note the added comma!
+HSPC.cluster.cov.mut.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(HSPC.cluster.cov.mut.per.window) = as.character(1:ncol(HSPC.cluster.cov.mut.per.window))
+rownames(HSPC.cluster.cov.mut.per.window) <- rownames
+
+
+##MkP
+extracted_cols <- lapply(win.ct.counts, function(x) x[,"MkP.mut.bulk.counts"]) #note the added comma!
+MkP.mut.bulk.counts.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(MkP.mut.bulk.counts.per.window) = as.character(1:ncol(MkP.mut.bulk.counts.per.window))
+rownames(MkP.mut.bulk.counts.per.window) <- rownames
+
+extracted_cols <- lapply(win.ct.counts, function(x) x[,"MkP.cluster.cov.mut"]) #note the added comma!
+MkP.cluster.cov.mut.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(MkP.cluster.cov.mut.per.window) = as.character(1:ncol(MkP.cluster.cov.mut.per.window))
+rownames(MkP.cluster.cov.mut.per.window) <- rownames
+
+
+##MEP
+extracted_cols <- lapply(win.ct.counts, function(x) x[,"MEP.mut.bulk.counts"]) #note the added comma!
+MEP.mut.bulk.counts.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(MEP.mut.bulk.counts.per.window) = as.character(1:ncol(MEP.mut.bulk.counts.per.window))
+rownames(MEP.mut.bulk.counts.per.window) <- rownames
+
+extracted_cols <- lapply(win.ct.counts, function(x) x[,"MEP.cluster.cov.mut"]) #note the added comma!
+MEP.cluster.cov.mut.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(MEP.cluster.cov.mut.per.window) = as.character(1:ncol(MEP.cluster.cov.mut.per.window))
+rownames(MEP.cluster.cov.mut.per.window) <- rownames
+
+##EP
+extracted_cols <- lapply(win.ct.counts, function(x) x[,"EP.mut.bulk.counts"]) #note the added comma!
+EP.mut.bulk.counts.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(EP.mut.bulk.counts.per.window) = as.character(1:ncol(EP.mut.bulk.counts.per.window))
+rownames(EP.mut.bulk.counts.per.window) <- rownames
+
+extracted_cols <- lapply(win.ct.counts, function(x) x[,"EP.cluster.cov.mut"]) #note the added comma!
+EP.cluster.cov.mut.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(EP.cluster.cov.mut.per.window) = as.character(1:ncol(EP.cluster.cov.mut.per.window))
+rownames(EP.cluster.cov.mut.per.window) <- rownames
+
+
+junction.final
+raw.counts <- rbind(HSPC.mut.bulk.counts.per.window[junction.final,], HSPC.cluster.cov.mut.per.window[junction.final,] ,
+                    MkP.mut.bulk.counts.per.window[junction.final,], MkP.cluster.cov.mut.per.window[junction.final,],
+                    MEP.mut.bulk.counts.per.window[junction.final,], MEP.cluster.cov.mut.per.window[junction.final,],
+                    EP.mut.bulk.counts.per.window[junction.final,], EP.cluster.cov.mut.per.window[junction.final,],
+                    mut.counts.per.window[junction.final,], cluster.cov.mut.per.window[junction.final,])
+
+raw.counts <- as.data.frame(sapply(raw.counts, as.integer))
+rownames(raw.counts) <- c("hspc.cryptic.reads.mut", "hspc.cluster.cov.mut",
+                          "mkp.cryptic.reads.mut", "mkp.cluster.cov.mut",
+                          "mep.cryptic.reads.mut", "mep.cluster.cov.mut",
+                          "ep.cryptic.reads.mut", "ep.cluster.cov.mut",
+                          "all.cryptic.reads.mut", "all.cluster.cov.mut")
+
+pheatmap(raw.counts, cluster_cols = F, cluster_rows = F, legend=F, display_numbers = T, number_format= "%.f",number_color = "blue",color=colorRampPalette(c("white", "white"))(50), show_rownames = T, show_colnames = F, gaps_row = c(8))
+```
+
+
+```{r}
+annotation_row[junction.final,]
+```
+
+
+```{r}
+gene <- "SEPT2"
+junctions.hspc[which(junctions.hspc$gene == gene),]
+junctions.imp[which(junctions.imp$gene == gene),]
+junctions.mkp[which(junctions.mkp$gene == gene),]
+junctions.mep[which(junctions.mep$gene == gene),]
+junctions.ep[which(junctions.ep$gene == gene),]
+#junctions.np[which(junctions.np$gene == gene),]
+
+FeaturePlot(mds.samples.integrated, features = gene)
+```
+
+
+
+```{r}
+FeaturePlot(mds.samples.integrated, features = c("DLST"))
+```
+
+```{r}
+de_results_downsample_wt_mut$EP$de_df["DLST",]
+de_results$HSPC$de_df["DLST",]
+de_results$EP$de_df["DLST",]
+```
+
+
+```{r}
+junction.final
+```
+
+
+
+##Barplot version
+
+
+
+```{r}
+
+ExpressionColor <- "red"
+PSIColor <- "steelblue"
+
+OldMax = max(psi.per.window.data$ONT.MUT.Expression)
+OldMin = min(psi.per.window.data$ONT.MUT.Expression)
+OldRange = (OldMax - OldMin)
+
+NewMax = max(psi.per.window.data$mut.psi)
+NewMin = min(psi.per.window.data$mut.psi)
+NewRange = (NewMax - NewMin)
+
+
+#pdf(paste0("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/individual.events/",gene,".mutpsi.vs.mutExpression.pdf"), width = 12, height = 8)
+
+ggplot(psi.per.window.data, aes(x=window, y=mut.psi, group = 1)) + 
+  geom_bar(stat="identity", fill=PSIColor) +
+  geom_line(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed" , color="red") +
+  geom_point(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin),color="red") +
+  scale_y_continuous(
+    name = "mut.psi",
+    #breaks=seq(min(psi.per.window.data$mut.psi), max(psi.per.window.data$mut.psi), length=5),
+    #labels=as.character(round(seq(m, max(psi.per.window.data$mut.psi+m), length=5),2)),
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression of MUT cells \n (average of normalized counts)")) +
+  theme_classic() +
+  labs(x="bin",
+       title = paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction),
+       subtitle = paste0("Spearman Correlation : ", round(cor(psi.per.window.data$mut.psi, psi.per.window.data$ONT.Expression, method = c("spearman") ), 4))) +
+  theme(plot.title = element_text(vjust = 2.5,hjust = 0.5, size = 17), 
+        axis.title.y = element_text(color =PSIColor , size=15), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=15),
+        plot.subtitle=element_text(size=12, hjust=0.5, face="italic", color="red")) 
+
+#dev.off()
+
+```
+
+
+
+
+
+
+
+
+
+```{r}
+
+psi.per.window.data
+ExpressionColor <- "red"
+PSIColor <- "steelblue"
+
+m <- floor(min(psi.per.window.data$mut.psi))
+psi.per.window.data$mut.psi <- psi.per.window.data$mut.psi - m
+psi.per.window.data
+
+
+OldMax = max(psi.per.window.data$ONT.MUT.Expression)
+OldMin = min(psi.per.window.data$ONT.MUT.Expression)
+OldRange = (OldMax - OldMin)
+
+NewMax = max(psi.per.window.data$mut.psi)
+NewMin = min(psi.per.window.data$mut.psi)
+NewRange = (NewMax - NewMin)
+
+
+pdf(paste0("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/individual.events/",gene,".mutpsi.vs.mutExpression.pdf"), width = 12, height = 8)
+
+ggplot(psi.per.window.data, aes(x=window, y=mut.psi, group = 1)) + 
+  geom_bar(stat="identity", fill=PSIColor) +
+  geom_line(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed" , color="red") +
+  geom_point(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin),color="red") +
+  scale_y_continuous(
+    name = "mut.psi",
+    breaks=seq(0,50),
+    #labels=seq(m, ceiling(max(psi.per.window.data$mut.psi+m)),length=length(seq(0,10))),
+    labels=(seq(0,50) + m),
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression of MUT cells \n (average of normalized counts)")) +
+  theme_classic() +
+  labs(x="bin",
+       title = paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction),
+       subtitle = paste0("Spearman Correlation : ", round(cor(psi.per.window.data$mut.psi, psi.per.window.data$ONT.Expression, method = c("spearman") ), 4))) +
+  theme(plot.title = element_text(vjust = 2.5,hjust = 0.5, size = 17), 
+        axis.title.y = element_text(color =PSIColor , size=15), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=15),
+        plot.subtitle=element_text(size=12, hjust=0.5, face="italic", color="red")) 
+
+dev.off()
+
+psi.per.window.data$mut.psi <- psi.per.window.data$mut.psi + m
+#psi.per.window.data
+
+```
+
+
+
+```{r}
+#mds.samples.integrated@meta.data
+
+FeaturePlot(mds.samples.integrated, features = gene)
+#FeaturePlot(mds.samples.integrated, features = "SERBP1")
+#FeaturePlot(mds.samples.integrated, features = "ADT-CD71")
+
+
+```
+
+
+```{r fig.height=1, fig.width=8}
+extracted_cols <- lapply(win.dPSI, function(x) x[,"mut.bulk.counts"]) 
+mut.counts.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(mut.counts.per.window) = as.character(1:ncol(mut.counts.per.window))
+rownames(mut.counts.per.window) <- rownames
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"cluster.cov.mut"]) #note the added comma!
+cluster.cov.mut.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(cluster.cov.mut.per.window) = as.character(1:ncol(cluster.cov.mut.per.window))
+rownames(cluster.cov.mut.per.window) <- rownames
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"wt.bulk.counts"]) 
+wt.counts.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(wt.counts.per.window) = as.character(1:ncol(wt.counts.per.window))
+rownames(wt.counts.per.window) <- rownames
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"cluster.cov.wt"]) #note the added comma!
+cluster.cov.wt.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(cluster.cov.wt.per.window) = as.character(1:ncol(cluster.cov.wt.per.window))
+rownames(cluster.cov.wt.per.window) <- rownames
+
+raw.counts <- rbind(mut.counts.per.window[junction.final,], cluster.cov.mut.per.window[junction.final,] , wt.counts.per.window[junction.final,] , cluster.cov.wt.per.window[junction.final,])
+
+raw.counts <- as.data.frame(sapply(raw.counts, as.integer))
+rownames(raw.counts) <- c("cryptic.reads.mut", "cluster.cov.mut","cryptic.reads.wt","cluster.cov.wt")
+
+pheatmap(raw.counts, cluster_cols = F, cluster_rows = F, legend=F, display_numbers = T, number_format= "%.f",number_color = "blue",color=colorRampPalette(c("white", "white"))(50), show_rownames = T, show_colnames = F, gaps_row = c(2))
+
+
+psi.per.window.data$p.val <- NA
+
+for (window in 1:ncol(raw.counts)){
+  contingency.table <- cbind(raw.counts[1:2,window], raw.counts[3:4,window])
+  contingency.table[2,] <- contingency.table[2,] - contingency.table[1,]
+  result <- fisher.test(contingency.table)
+  psi.per.window.data[window,]$p.val <- result$p.value
+}
+
+
+#psi.per.window.data
+#psi.per.window.data$window <- as.numeric(psi.per.window.data$window)
+#psi.per.window.data$start <- psi.per.window.data$window - 0.5
+#psi.per.window.data$end <- psi.per.window.data$window + 0.5
+
+```
+
+
+
+```{r}
+#contingency.table <- cbind(c(54, 152) ,c(158,263) )
+contingency.table <- cbind(c(54, 152) ,c(111,206))
+
+contingency.table <- cbind(c(3, 180) ,c(9,307))
+
+contingency.table
+fisher.test(contingency.table)
+```
+
+
+```{r}
+psi.per.window.data$p.val.label <- ""
+psi.per.window.data[which(psi.per.window.data$p.val <= 0.05 ),]$p.val.label <- "*"
+psi.per.window.data[which(psi.per.window.data$p.val <= 0.01 ),]$p.val.label <- "**"
+psi.per.window.data[which(psi.per.window.data$p.val <= 0.001 ),]$p.val.label <- "***"
+psi.per.window.data
+```
+
+
+```{r}
+ExpressionColor <- "red"
+dPSIColor <- "steelblue"
+
+ggplot(psi.per.window.data, aes(x=window, y=dPSI ,  group = 1)) + 
+  geom_bar(stat="identity", fill=dPSIColor) +
+  #geom_text(aes(label=p.val.label), vjust=-0.3, size=4 ) +
+  #geom_text(aes(data=subset(psi.per.window.data, dPSI >= 0 ) , label=p.val.label), vjust=-0.5, size=3.5 ) +
+  geom_point(aes(y =(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), color=ExpressionColor) +
+  stat_smooth(aes(y =(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed", color=ExpressionColor, method = "loess", formula = y ~ x, se = F, span=0.5)+
+  geom_hline(yintercept = 0, linetype = "dotted") + 
+  scale_y_continuous(
+    name = "dPSI",
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression \n (average of normalized counts)")) +
+  #annotation_custom(grob)+
+  theme_classic()+
+  labs(x="bin",
+       title = paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction),
+       subtitle = paste0("Spearman Correlation : ", round(cor(psi.per.window.data$dPSI, psi.per.window.data$ONT.Expression, method = c("spearman") ), 4))) +
+  theme(plot.title = element_text(vjust = 2.5,hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13),
+        plot.subtitle=element_text(size=10, hjust=0.5, face="italic", color="red")) 
+```
+
+
+
+
+```{r}
+
+ExpressionColor <- "red"
+dPSIColor <- "steelblue"
+
+pdf(paste0("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/MDS.output/pdfs/ct.sub/individual.events/",gene,".dPSI.vs.Expression.pdf"), width = 12, height = 8)
+
+ggplot(psi.per.window.data, aes(x=window, y=dPSI ,  group = 1)) + 
+  geom_bar(stat="identity", fill=dPSIColor) +
+  geom_text(aes(label=p.val.label), vjust=-0.2, size=8) +
+  #geom_text(aes(data=subset(psi.per.window.data, dPSI >= 0 ) , label=p.val.label), vjust=-0.5, size=3.5 ) +
+  geom_point(aes(y =(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), color=ExpressionColor) +
+  stat_smooth(aes(y =(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed", color=ExpressionColor, method = "loess", formula = y ~ x, se = F, span=0.5)+
+  geom_hline(yintercept = 0, linetype = "dotted") + 
+  scale_y_continuous(
+    name = "dPSI",
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression \n (average of normalized counts)")) +
+  #annotation_custom(grob)+
+  theme_classic()+
+  labs(x="bin",
+       title = paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction),
+       subtitle = paste0("Spearman Correlation : ", round(cor(psi.per.window.data$dPSI, psi.per.window.data$ONT.Expression, method = c("spearman") ), 4))) +
+  theme(plot.title = element_text(vjust = 2.5,hjust = 0.5, size = 17), 
+        axis.title.y = element_text(color =dPSIColor , size=15), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=15),
+        plot.subtitle=element_text(size=12, hjust=0.5, face="italic", color="red")) 
+
+dev.off()
+  
+```
+
+
+```{r fig.height=1, fig.width=15}
+paletteLength <- 50
+myColor <- colorRampPalette(c("navy", "white", "red"))(paletteLength)
+# length(breaks) == length(paletteLength) + 1
+# use floor and ceiling to deal with even/odd length pallettelengths
+myBreaks <- c(seq(min(psi.per.window.data$p.val), 0.05, length.out=ceiling(paletteLength/2) + 1), 
+              seq(max(psi.per.window.data$p.val)/paletteLength, max(psi.per.window.data$p.val), length.out=floor(paletteLength/2)))
+
+pheatmap(t(psi.per.window.data$p.val), cluster_cols = F, cluster_rows = F,  breaks=myBreaks, display_numbers = T,fontsize_number=12,  number_format= "%.3f",number_color = "black")
+```
+
+
+```{r}
+psi.per.window.data
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##Why is the MUT expression higher in certain windows
+
+```{r}
+
+thresh <- 0
+MUT.info <- as.data.frame(matrix(nrow=length(win.dPSI), ncol=9))
+rownames(MUT.info) <- 1:length(win.dPSI)
+colnames(MUT.info) <- c("total.raw.counts","mean.exp","total.num.cells","num_norm_>_0","pct_with_gene","num_reads_<_thresh","num_reads_>=_thresh", "num_norm_>_0_reads_<_thresh","pct_reads_<_thresh")
+
+for (i in 1:length(win.dPSI)){
+  window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[i]]
+  MUT.info[i,"total.raw.counts"] <- sum(window.info[which(window.info$genotype =="MUT" & window.info$total >= thresh),]$gene.counts)
+  MUT.info[i,"mean.exp"] <- mean(window.info[which(window.info$genotype =="MUT"),]$norm.counts)
+  MUT.info[i,"total.num.cells"] <- nrow(window.info[which(window.info$genotype =="MUT"),])
+  MUT.info[i,"num_norm_>_0"] <- nrow(window.info[which(window.info$genotype =="MUT" & window.info$norm.counts > 0),])
+  MUT.info[i,"pct_with_gene"] <- (MUT.info[i,"num_norm_>_0"]/MUT.info[i,"total.num.cells"])*100
+  MUT.info[i,"num_reads_<_thresh"] <- nrow(window.info[which(window.info$genotype =="MUT" & window.info$total < thresh),])
+  MUT.info[i,"num_reads_>=_thresh"] <- nrow(window.info[which(window.info$genotype =="MUT" & window.info$total >= thresh),])
+  MUT.info[i,"num_norm_>_0_reads_<_thresh"] <- nrow(window.info[which(window.info$genotype =="MUT" & window.info$norm.counts > 0 & window.info$total < thresh),])
+  MUT.info[i,"pct_reads_<_thresh"] <- MUT.info[i,"num_reads_<_thresh"]/MUT.info[i,"total.num.cells"] *100
+  
+}
+
+MUT.info[,c("total.raw.counts", "total.num.cells","pct_with_gene","num_reads_>=_thresh", "pct_reads_<_thresh")]
+
+```
+
+
+```{r}
+WT.info <- as.data.frame(matrix(nrow=length(win.dPSI), ncol=9))
+rownames(WT.info) <- 1:length(win.dPSI)
+colnames(WT.info) <- c("total.raw.counts","mean.exp","total.num.cells","num_norm_>_0","pct_with_gene","num_reads_<_thresh","num_reads_>=_thresh", "num_norm_>_0_reads_<_thresh", "pct_reads_<_thresh")
+
+for (i in 1:length(win.dPSI)){
+  window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[i]]
+  WT.info[i,"total.raw.counts"] <- sum(window.info[which(window.info$genotype =="WT" & window.info$total >= thresh),]$gene.counts)
+  WT.info[i,"mean.exp"] <- mean(window.info[which(window.info$genotype =="WT"),]$norm.counts)
+  WT.info[i,"total.num.cells"] <- nrow(window.info[which(window.info$genotype =="WT"),])
+  WT.info[i,"num_norm_>_0"] <- nrow(window.info[which(window.info$genotype =="WT" & window.info$norm.counts > 0),])
+  WT.info[i,"pct_with_gene"] <- (WT.info[i,"num_norm_>_0"]/WT.info[i,"total.num.cells"])*100
+  WT.info[i,"num_reads_<_thresh"] <- nrow(window.info[which(window.info$genotype =="WT" & window.info$total < thresh),])
+  WT.info[i,"num_reads_>=_thresh"] <- nrow(window.info[which(window.info$genotype =="WT" & window.info$total >= thresh),])
+  WT.info[i,"num_norm_>_0_reads_<_thresh"] <- nrow(window.info[which(window.info$genotype =="WT" & window.info$norm.counts > 0 & window.info$total < thresh),])
+  WT.info[i,"pct_reads_<_thresh"] <- WT.info[i,"num_reads_<_thresh"]/WT.info[i,"total.num.cells"]*100
+}
+
+WT.info[,c("total.raw.counts", "total.num.cells","pct_with_gene","num_reads_>=_thresh", "pct_reads_<_thresh")]
+
+```
+
+
+
+```{r fig.height=1, fig.width=8}
+num.cells.per.window <- rbind(WT.info$`num_reads_>=_thresh` ,MUT.info$`num_reads_>=_thresh`)
+
+rownames(num.cells.per.window) <- c("num.wt.cells","num.mut.cells")
+num.cells.per.window
+
+pheatmap(num.cells.per.window, cluster_cols = F, cluster_rows = F, legend=F, display_numbers = T, number_format= "%.f",number_color = "dark green",color=colorRampPalette(c("white", "white"))(50), show_rownames = T, show_colnames = F, gaps_row = c(1))
+```
+
+
+```{r}
+annotation_row[which(annotation_row$sum >0 & !is.na(annotation_row$NMD.verdict.adj)),]
+```
+
+
+##Distance of crypitc site for NMD vs non-NMD
+```{r}
+annotation_row
+
+ggplot(annotation_row[which(annotation_row$sum >0 & !is.na(annotation_row$NMD.verdict.adj)),], aes(x=threeprime_distance, color=NMD.verdict.adj)) + geom_density()
+
+ggplot(annotation_row[which(annotation_row$NMD.verdict.adj %in% c("NMD","not NMD")),], aes(x=threeprime_distance, color=NMD.verdict.adj)) + geom_density()
+```
+
+
+

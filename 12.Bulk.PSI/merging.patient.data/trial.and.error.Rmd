@@ -1,0 +1,65 @@
+
+```{r}
+count.matrix1 <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/CH259/output_files/leafcutter_outputs/CH259_output/CH259_perind_numbers.counts.txt", header = T)
+
+count.matrix2 <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/CH305/output_files/leafcutter_outputs/CH305_output/CH305_perind_numbers.counts.txt", header = T)
+
+
+count.matrix1[1:5,]
+colnames(count.matrix1)[2:ncol(count.matrix1)] <- paste0(colnames(count.matrix1)[2:ncol(count.matrix1)],"_1")
+
+colnames(count.matrix1)[1:5]
+```
+
+
+
+
+```{r}
+df1 = data.frame(x=c('a', 'b', 'c', 'd', 'e'), y1= c(0,1,0,2,3))
+df2 = data.frame(x= c('a', 'b', 'c'),  y2 = c(0,1,0))
+df3 = data.frame(x=c('a', 'b', 'c','e'),  y3 = c(0,1,0,2))
+
+df_list <- list(df1, df2, df3)
+print(df_list)
+df.merged <- Reduce(function(d1, d2) merge(d1, d2, all.x = T, all.y = F), 
+       df_list)
+
+df.merged[is.na(df.merged)] <- 0
+df.merged
+
+```
+
+
+
+##Checking to see if the values are the same for the pseudobulking counts
+
+```{r}
+merge.after <- read.csv("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/12.Bulk.PSI/output/CH259.CH305.all.intron.metadata.with.bulkPSI.ONT.tsv", sep="\t")
+merge.before <- read.csv("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/12.Bulk.PSI/output/CH259.CH305.merged.all.intron.metadata.with.bulkPSI.ONT.tsv", sep="\t")
+```
+
+
+
+merging the genotyping tables:
+```{r}
+GT.1 <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/3.Genotyping_info/ch_259.genotype.info.with.cell.type.txt")
+
+GT.2 <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/3.Genotyping_info/ch_305.genotype.info.with.cell.type.txt")
+
+GT.3 <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/3.Genotyping_info/ch_305.genotype.info.with.cell.type.txt")
+
+GT.4 <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/3.Genotyping_info/ch_305.genotype.info.with.cell.type.txt")
+
+GT.merged <- rbind(genotyping.table1, genotyping.table2)
+
+genotyping.table1
+genotyping.table2
+GT.merged
+
+write.table(GT.merged, file="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/12.Bulk.PSI/merging.patient.data/CH259.CH305.merged.genotype.info.with.cell.type.txt", quote = F, row.names = T, col.names = T)
+
+genotyping.table.merged <- do.call("rbind", list(GT.1, GT.2, GT.3, GT.4))
+```
+
+
+

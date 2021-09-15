@@ -1,0 +1,552 @@
+
+```{r}
+library(ggsignif)
+library(Seurat)
+library(ggplot2)
+
+```
+
+##How do the NMD associated gene look like on the Volcano
+```{r}
+
+##CH full Diff exp table
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/de_results_CH.v2.Rdata")
+de_df <- de_results$EP$de_df
+de_df <- de_results$HSPC$de_df
+
+
+##MDS full Diff exp table
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/de_results_downsample_wt_mut.v2.Rdata")
+de_results_downsample_wt_mut$EP$de_df
+de_df <- de_results_downsample_wt_mut$EP$de_df
+
+##MDS full Diff exp table MEP+EP cells 
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/de_results_downsample_wt_mut_EP_MEP_10000var_07202021.v2.Rdata")
+de_results_downsample_wt_mut$DGE$de_df
+de_df <- de_results_downsample_wt_mut$DGE$de_df
+
+
+##MDS full Diff exp table - All cell types:
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/de_results_downsample_wt_mut_AllCells_07192021.v2.Rdata")
+#de_results_downsample_wt_mut$DGE$de_df
+de_df <- de_results_downsample_wt_mut$DGE$de_df
+
+
+##Try CH?
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/de_results_CH.v2.Rdata")
+```
+
+
+
+
+```{r}
+
+de_df[grep("PPOX", rownames(de_df), value = TRUE),]
+
+```
+
+
+```{r}
+
+de_results$HSPC$de_df["TP53",]
+de_results$EP$de_df["TP53",]
+de_results_downsample_wt_mut$EP$de_df["TP53",]
+de_results_downsample_wt_mut$DGE$de_df["TP53",]
+
+
+```
+
+
+```{r}
+nmd.info <- read.csv("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info_w_NMD_faster_with_start_codon_correction.csv")
+
+table(nmd.info$NMDVerdict)
+
+
+table(nmd.info[which(nmd.info$dPSI >0.5),]$NMDVerdict)
+
+#51%
+
+table(nmd.info[which(nmd.info$dPSI >0 & nmd.info$pvalue <= 0.05),]$NMDVerdict)
+
+421
+
+table(nmd.info[which(nmd.info$dPSI >=0.5 & nmd.info$pvalue <= 0.05),]$NMDVerdict)
+
+#54%
+
+nmd.info
+```
+
+
+```{r}
+nmd.info[which(nmd.info$gene == "HSH2D"),]
+```
+
+#Grab things significanlty differnetially used in the EP cells 
+
+```{r}
+alt.splicing.info[which(alt.splicing.info$gene == "HSH2D"),]
+```
+
+
+```{r}
+nmd.info <- read.csv("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info_w_NMD_faster_with_start_codon_correction.csv")
+
+#rownames(nmd.info) <- nmd.info$intron_junction
+table(nmd.info$NMDVerdict)
+nmd.info[which(nmd.info$NMDVerdict==""),]
+nmd.info.sub <- nmd.info[which(nmd.info$NMDVerdict!=""),]
+rownames(nmd.info.sub) <- nmd.info.sub$intron_junction
+
+alt.splicing.info <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/MDS_P5_P6/EP/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_and_exon.skipping_info.txt")
+
+alt.splicing.info <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/6.Comb_patients_2WT/5_read_threshold/MDS_P5_P6/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_and_exon.skipping_info.txt")
+
+#alt.splicing.info <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/4.Comb_patients_merge_counts/CH_combined/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_info.txt")
+
+#nrow(alt.splicing.info)
+#alt.splicing.info <- alt.splicing.info[!duplicated(alt.splicing.info$intron_junction),]
+#nrow(alt.splicing.info)
+#rownames(alt.splicing.info) <- alt.splicing.info$intron_junction
+
+alt.splicing.info$nmd.verdict <- NA
+shared.junctions <- intersect(rownames(nmd.info.sub),rownames(alt.splicing.info))
+alt.splicing.info[shared.junctions,]$nmd.verdict <- paste(nmd.info.sub[shared.junctions,]$NMDVerdict)
+alt.splicing.info.sub <- alt.splicing.info[shared.junctions,]
+
+#genes.w.cryptic <- unique(alt.splicing.info.sub$gene)
+
+
+#genes.w.cryptic <- unique(alt.splicing.info.sub[which(alt.splicing.info.sub$pvalue <= 0.05  & alt.splicing.info.sub$dPSI < -0.5),]$gene)
+genes.w.cryptic <- unique(alt.splicing.info.sub[which(alt.splicing.info.sub$dPSI >= 0.5),]$gene)
+genes.w.cryptic <- unique(alt.splicing.info.sub[which(alt.splicing.info.sub$pvalue <= 0.05),]$gene)
+genes.w.cryptic <- unique(alt.splicing.info.sub[which(alt.splicing.info.sub$pvalue <= 0.05 & alt.splicing.info.sub$dPSI >= 0.5),]$gene)
+genes.w.cryptic <- unique(alt.splicing.info.sub[which(alt.splicing.info.sub$pvalue <= 0.05 & alt.splicing.info.sub$dPSI >= 0.5 & alt.splicing.info.sub$three.mut.cluster.cov >=5 & alt.splicing.info.sub$three.wt.cluster.cov >=5),]$gene)
+#genes.w.cryptic <- unique(alt.splicing.info.sub[which(alt.splicing.info.sub$dPSI > 0.5),]$gene)
+length(genes.w.cryptic)
+
+alt.splicing.info.sub[which(alt.splicing.info.sub$gene == "HSH2D"),]
+
+nmd.gene.list <- unique(alt.splicing.info.sub[which(alt.splicing.info.sub$gene %in% genes.w.cryptic & alt.splicing.info.sub$nmd.verdict == "NMD"),]$gene)
+nmd.insensitive.gene.list <- unique(alt.splicing.info.sub[which(alt.splicing.info.sub$gene %in% genes.w.cryptic & alt.splicing.info.sub$nmd.verdict == "not NMD"),]$gene)
+
+intersect(nmd.gene.list, nmd.insensitive.gene.list)
+```
+
+
+
+
+```{r}
+table(alt.splicing.info$nmd.verdict)
+```
+
+
+
+```{r}
+de_df$NMD.verdict <- NA
+de_df[which(de_df$Gene %in% nmd.insensitive.gene.list),]$NMD.verdict <- "NMD-insensitive" 
+de_df[which(de_df$Gene %in% nmd.gene.list),]$NMD.verdict <- "NMD-sensitive"
+de_df$NMD.verdict <- factor(de_df$NMD.verdict,levels = c("NMD-sensitive","NMD-insensitive" ))
+table(de_df$NMD.verdict)
+
+
+de_df["CD36",]
+```
+
+
+```{r}
+de_df[which(de_df$avg_logFC < 0),]
+de_df[which(de_df$avg_logFC < 0 & !is.na(de_df$NMD.verdict)),]
+
+
+de_df[which(de_df$avg_logFC > 0),]
+de_df[which(de_df$avg_logFC > 0 & !is.na(de_df$NMD.verdict)),]
+
+table(de_df[which(de_df$avg_logFC < 0 & !is.na(de_df$NMD.verdict)),]$NMD.verdict)
+table(de_df[which(de_df$avg_logFC > 0 & !is.na(de_df$NMD.verdict)),]$NMD.verdict)
+```
+
+
+##What is causing the filtering of the genes more highly expressed in the WT
+
+
+```{r}
+de_df.sub <- de_df[which(de_df$NMD.verdict %in% c("NMD-sensitive","NMD-insensitive")),]
+de_df.sub$avg_logFC.z.score <- scale(de_df.sub$avg_logFC)
+
+as.data.frame(t(scale(t(mut.psi.per.window))))
+```
+
+
+```{r}
+
+df <- de_df.sub
+
+ggplot(df, aes(x=NMD.verdict, y=avg_logFC)) + geom_boxplot() + geom_point() + 
+  geom_signif(comparisons = list(c("NMD-sensitive","NMD-insensitive")), map_signif_level=TRUE) + theme_classic(base_size = 17)
+
+df <- de_df.sub[which(de_df.sub$p_val <= 0.05),]
+ggplot(df, aes(x=NMD.verdict, y=avg_logFC)) + geom_boxplot() + geom_point() + 
+  geom_signif(comparisons = list(c("NMD-sensitive","NMD-insensitive")), map_signif_level=TRUE) 
+
+df <- de_df.sub[which(de_df.sub$pct.1 >=0.1 & de_df.sub$pct.2 >= 0.1 & de_df.sub$Gene %in% genes.w.cryptic),]
+#pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/NMD.logFC.comparison.pval.thresh.pdf", width = 15, height = 10)
+#pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/NMD.logFC.comparison.pdf", width = 15, height = 10)
+ggplot(df, aes(x=NMD.verdict, y=avg_logFC)) + geom_boxplot() + geom_point() + 
+  geom_signif(comparisons = list(c("NMD-sensitive","NMD-insensitive")), map_signif_level=TRUE) + theme_classic(base_size = 17)
+
+
+
+#+ scale_fill_manual(values = c("royalblue1", "firebrick2"), breaks = c("NMD-sensitive","NMD-insensitive")) 
+
+df <- de_df.sub[which(de_df.sub$pct.1 >=0.1 & de_df.sub$pct.2 >= 0.1 & de_df.sub$Gene %in% genes.w.cryptic & de_df.sub$p_val <=0.05),]
+
+ggplot(df, aes(x=NMD.verdict, y=avg_logFC)) + geom_boxplot() + geom_point() + 
+  geom_signif(comparisons = list(c("NMD-sensitive","NMD-insensitive")), map_signif_level=TRUE) 
+
+df <- de_df.sub[which(de_df.sub$pct.1 >=0.2 & de_df.sub$pct.2 >= 0.2 & de_df.sub$Gene %in% genes.w.cryptic),]
+ggplot(df, aes(x=NMD.verdict, y=avg_logFC)) + geom_boxplot() + geom_point() + 
+  geom_signif(comparisons = list(c("NMD-sensitive","NMD-insensitive")), map_signif_level=TRUE)
+
+df <- de_df.sub[which(de_df.sub$pct.1 >=0.2 & de_df.sub$pct.2 >= 0.2 & de_df.sub$Gene %in% genes.w.cryptic & de_df.sub$p_val <=0.05),]
+ggplot(df, aes(x=NMD.verdict, y=avg_logFC)) + geom_boxplot() + geom_point() + 
+  geom_signif(comparisons = list(c("NMD-sensitive","NMD-insensitive")), map_signif_level=TRUE)
+
+
+
+```
+
+
+```{r}
+pdf("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/NMD.logFC.comparison.pval.thresh.zscore.pdf", width = 15, height = 10)
+
+ggplot(df, aes(x=NMD.verdict, y=avg_logFC.z.score)) + geom_boxplot(outlier.shape = NA)+
+  geom_signif(comparisons = list(c("NMD-sensitive","NMD-insensitive"))) + theme_classic(base_size = 17)
+
+dev.off()
+
+wilcox.test(df[which(df$NMD.verdict =="NMD-sensitive"),]$avg_logFC.z.score, df[which(df$NMD.verdict =="NMD-insensitive"),]$avg_logFC.z.score)
+```
+
+
+##Find a way to normalize the logFC values 
+
+##We have an imbalance in the number of transcripts we are seeing in our MUT vs WT cells so maybe we can divide each gene by 
+# NUM raw reads in MUT/ NUM raw reads in WT
+
+```{r}
+
+mut.cells <- rownames(mds.samples.integrated@meta.data[which(mds.samples.integrated@meta.data$Genotype_2UMI == "MUT" & mds.samples.integrated@meta.data$Cell.Assignment_adj =="EP"),])
+num.mut.cells <- length(mut.cells)
+mut.counts <- sum(mds.samples.integrated@assays$RNA@counts["CD36",mut.cells])
+wt.cells <- rownames(mds.samples.integrated@meta.data[which(mds.samples.integrated@meta.data$Genotype_2UMI == "WT" & mds.samples.integrated@meta.data$Cell.Assignment_adj =="EP"),])
+num.wt.cells <- length(wt.cells)
+wt.counts <- sum(mds.samples.integrated@assays$RNA@counts["CD36",wt.cells])
+
+num.mut.cells
+num.wt.cells
+num.mut.cells/num.wt.cells
+mut.counts
+wt.counts
+mut.counts/wt.counts
+
+de_df
+```
+
+##Un log it - normalize it - re-log it 
+```{r}
+##Normalize using sample ratio
+num.mut.cells
+num.wt.cells
+num.mut.cells/num.wt.cells
+
+
+de_df$FC <- 2^de_df$avg_logFC
+de_df$FC.norm <- de_df$FC/(num.mut.cells/num.wt.cells)
+de_df$logFC.norm <- log2(de_df$FC.norm)
+de_df
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+table(de_df$NMD.verdict)
+
+de_df[which(is.na(de_df$NMD.verdict) & de_df$pct.1 > 0.1 & de_df$pct.2 > 0.1),]
+de_df[which(de_df$pct.1 > 0.1 & de_df$pct.2 > 0.1),]
+
+#Of the 10,000 variable genes, 5,000 get filtered out as they are found in < 10% of the MUT and WT cells)
+```
+
+
+
+##  SKIP THIS PART  ##
+```{r}
+#genes.w.cryptic <- nmd.info[which(nmd.info$dPSI >0),]$gene
+genes.w.cryptic <- alt.splicing.info[which(alt.splicing.info$dPSI >= 0.5),]$gene
+genes.w.cryptic <- alt.splicing.info[which(alt.splicing.info$dPSI >= 0.5 & alt.splicing.info$pvalue <= 0.05),]$gene
+
+alt.splicing.info$gene.and.junc <- paste0(alt.splicing.info$gene,":",alt.splicing.info$intron_junction)
+nmd.gene.list <- unique(alt.splicing.info[which(alt.splicing.info$nmd.verdict == "NMD"),]$gene)
+nmd.insensitive.gene.list <- unique(alt.splicing.info[which(alt.splicing.info$nmd.verdict == "not NMD"),]$gene)
+
+library(dplyr)
+library(stringr)
+
+alt.splicing.info
+alt.splicing.info[which(alt.splicing.info$Final_Verdict == "Cryptic_threeprime"),]
+
+table(alt.splicing.info[which(alt.splicing.info$Final_Verdict == "Cryptic_threeprime"),]$nmd.verdict)
+
+alt.splicing.info[which(alt.splicing.info$Final_Verdict == "Cryptic_threeprime" &  is.na(alt.splicing.info$nmd.verdict )),]
+
+```
+
+
+## Zooming in on genes with cryptic sites
+
+```{r}
+#nmd.info[which(nmd.info$dPSI > 0),]
+
+length(genes.w.cryptic)
+length(intersect(genes.w.cryptic, de_df$Gene))
+
+de_df
+de_df[which(de_df$p_val <= 0.05),]
+de_df[which(de_df$pct.1 >= 0.1 & de_df$pct.2 >= 0.1 & de_df$Gene %in% genes.w.cryptic),]
+de_df[which(de_df$pct.1 >= 0.2 & de_df$pct.2 >= 0.2 & de_df$Gene %in% genes.w.cryptic),]
+#de_df[which(de_df$pct.1 >= 0.1 & de_df$pct.2 >= 0.1 & de_df$Gene %in% genes.w.cryptic),]$Gene
+de_df[which(de_df$pct.1 >=0.1 & de_df$pct.2 >= 0.1 & de_df$Gene %in% genes.w.cryptic & de_df$p_val <= 0.05),]
+```
+
+
+
+```{r}
+de_df[which(de_df$pct.1 >=0.1 & de_df$pct.2 >= 0.1 & de_df$Gene %in% genes.w.cryptic),]
+de_df[which(de_df$pct.1 >=0.1 & de_df$pct.2 >= 0.1 & de_df$NMD.verdict == "NMD-insensitive"),] %>% arrange(avg_logFC)
+```
+
+
+
+
+
+
+
+
+
+##Do we have expression of the GATA1 short isoform 
+
+```{r}
+MDS.P5.P6.EP.DiffSplicing <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/7.Comb_patients_ind_celltype_merge_counts_2WT/MDS_P5_P6/EP/logOR_within_cell_type_ALT_3P_Junctions_with_threshold_and_exon.skipping_info.txt")
+
+
+
+MDS.P5.P6.EP.DiffSplicing[which(MDS.P5.P6.EP.DiffSplicing$gene == "GATA1"),]
+```
+
+
+##Generating NMD module from our Data and looking at the expression of
+
+```{r}
+
+nmd.gene.module <- unique(nmd.info[which(nmd.info$dPSI >= 0 & nmd.info$pvalue <= 0.05 & nmd.info$NMDVerdict == "NMD"),]$gene)
+
+no.ribo <- nmd.info[which(nmd.info$dPSI >= 0 & nmd.info$pvalue <= 0.05 & nmd.info$NMDVerdict == "NMD"),] %>% filter(str_detect(gene, "RPL|RPS", negate = TRUE))
+nmd.gene.module.no.ribo <- unique(no.ribo$gene)
+
+length(nmd.gene.module)
+length(nmd.gene.module.no.ribo)
+
+nmd.insensitive.gene.module <- nmd.info[which(nmd.info$dPSI >= 0 & nmd.info$pvalue <= 0.05 & nmd.info$NMDVerdict == "not NMD"),]$gene
+
+length(nmd.gene.module)
+```
+
+
+
+```{r}
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/4.Integrated_seurat_objs/mds.sample.integrated.p4.5.6.in.progress_2_noMature_withPseudotime.Rdata")
+
+length(intersect(rownames(seurat@assays$RNA@data),nmd.gene.module))
+
+seurat <- AddModuleScore(seurat, features = list(nmd.gene.module), name = "NMD.sensitive.genes")
+seurat <- AddModuleScore(seurat, features = list(nmd.gene.module.no.ribo), name = "NMD.sensitive.genes.no.ribo")
+seurat <- AddModuleScore(seurat, features = list(nmd.insensitive.gene.module), name = "NMD.insensitive.genes")
+
+
+
+
+library(ggplot2)
+library(ggsignif)
+
+ggplot(seurat@meta.data[which(seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),], aes(x=Cell.Assignment.Final, y=NMD.sensitive.genes1, color=Genotype_2UMI)) + geom_boxplot() 
+
+ggplot(seurat@meta.data[which(seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),], aes(x=Cell.Assignment.Final, y=NMD.sensitive.genes.no.ribo1, color=Genotype_2UMI)) + geom_boxplot() 
+
+ggplot(seurat@meta.data[which(seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),], aes(x=Genotype_2UMI, y=NMD.sensitive.genes1)) + geom_boxplot() 
+
+library(ggpubr)
+
+
+ggplot(seurat@meta.data[which(seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),], aes(x=Cell.Assignment.Final, y=NMD.sensitive.genes1, color=Genotype_2UMI)) + geom_boxplot() + geom_signif()
+
+ggplot(seurat@meta.data[which(seurat@meta.data$Cell.Assignment.Final == "MEP" & seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),], aes(x=Cell.Assignment.Final, y=NMD.sensitive.genes1, color=Genotype_2UMI)) + geom_boxplot() + geom_signif(map_signif_level=TRUE)
+
+
+ggboxplot(data = seurat@meta.data[which(seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),], x = 'Cell.Assignment.Final', y = 'NMD.sensitive.genes1', color = 'Genotype_2UMI') + stat_compare_means(label.y = 35, method = "wilcox.test") + theme(legend.position = 'none')
+
+ggplot(seurat@meta.data[which(seurat@meta.data$Cell.Assignment.Final == "EP" & seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),], aes(x=Genotype_2UMI, y=NMD.sensitive.genes1)) + geom_boxplot() + geom_signif(comparisons = list(c("MUT","WT")), map_signif_level=TRUE)
+#+ geom_point(pch = 21, position = position_jitterdodge())
+
+
+##Write out the seurat metadatatable to use locally
+
+
+
+
+```
+
+#Write out the NMD module
+```{r}
+write.table(nmd.gene.module, quote=F, file="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/NMD.sensitive.gene.module.txt", row.names=F, col.names = F)
+```
+
+
+
+```{r}
+##Try using Franco's method of calculating a module score (average expression x10,000 or something)
+
+##Do we need to downsample the counts first?
+
+shared_genes <- intersect(nmd.gene.module, rownames(seurat@assays$RNA@counts))
+nmd.umi.counts <- (Matrix::colSums(seurat@assays$RNA@counts[shared_genes, ])/seurat@meta.data$nCount_RNA)*100
+seurat@meta.data$NMD.sensitive.gene.expression <- nmd.umi.counts[rownames(seurat@meta.data)]
+
+shared_genes <- intersect(nmd.insensitive.gene.module, rownames(seurat@assays$RNA@counts))
+not.nmd.umi.counts <- (Matrix::colSums(seurat@assays$RNA@counts[shared_genes, ])/seurat@meta.data$nCount_RNA)*100
+seurat@meta.data$NMD.insensitive.gene.expression <- not.nmd.umi.counts[rownames(seurat@meta.data)]
+
+
+shared_genes <- intersect(nmd.gene.module.no.ribo, rownames(seurat@assays$RNA@counts))
+nmd.umi.counts.no.ribo <- (Matrix::colSums(seurat@assays$RNA@counts[shared_genes, ])/seurat@meta.data$nCount_RNA)*100
+seurat@meta.data$NMD.sensitive.gene.expression.no.ribo <- nmd.umi.counts.no.ribo[rownames(seurat@meta.data)]
+
+```
+
+
+
+##NMD reactome Module:
+```{r}
+nmd.module.reactome <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/NMD_Reactome.txt")
+list(nmd.gene.module)
+
+list(paste(nmd.module.reactome$V1))
+
+seurat <- AddModuleScore(seurat, features = list(paste(nmd.module.reactome$V1)), name = "NMD.reactome")
+
+```
+
+
+
+
+```{r}
+
+seurat.meta.data <- seurat@meta.data
+save(seurat.meta.data, version=2, file="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/MDS.seurat.meta.data.table.wNMDmodule.Rdata")
+```
+
+
+##Look at differences in %mito between our MUT and WT cells
+
+```{r}
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/4.Integrated_seurat_objs/mds.sample.integrated.p4.5.6.in.progress_2_withPseudotime.RData")
+
+seurat@meta.data
+
+
+data <- seurat@meta.data[which(seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),]
+p <- ggplot(data, aes(x=WS, y=DV, group=count))
+
+#p <- p + geom_boxplot(aes(fill=factor(count), group=interaction(WS, count)))
+p <- p + stat_summary(fun.y=median, geom="smooth", aes(group=factor(count), color =factor(count)))
+#p <- p + scale_x_continuous(breaks = c(2,6,14))
+
+p.values <- sapply(split(data, data$Cell.Assignment_adj), function(x){wilcox.test(percent.mito~Genotype_2UMI, x)$p.value})
+labels <- symnum(p.values, corr = FALSE, cutpoints = c(0,  .001,.01,.05, 1), symbols = c("***","**","*","n.s."))
+labels
+
+#y.values <- sapply(split(data, data$Cell.Assignment_adj), function(x){max(sapply(split(x, x$Genotype_2UMI), function(xx){boxplot(x$percent.mito, plot=F)$stats[5, ]}))})+2
+
+p.values
+data
+
+ggplot(data, aes(x=Cell.Assignment_adj, y=percent.mito, group=Genotype_2UMI)) + geom_boxplot(aes(fill=factor(Genotype_2UMI), group=interaction(Cell.Assignment_adj, Genotype_2UMI))) 
+
++ geom_text(aes(label = labels), vjust = 1.5, colour = "white") + theme_classic(base_size = 17)
+
+
+ggplot(data=aging, aes(x=Group, y=Age, fill=Sex)) + 
+  geom_boxplot(position=position_dodge(width=0.8)) +
+  geom_text(data=aging.sum, aes(label=round(Age,1), y = Age + 3), 
+            size=6, position=position_dodge(width=0.8))
+
+
+labels
+```
+
+
+```{r}
+seurat@meta.data[which(seurat@meta.data$Genotype_2UMI %in% c("MUT","WT") & seurat@meta.data$Cell.Assignment_adj != "Mat_Mono"),]
+seurat@meta.data[which(seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),]
+```
+
+
+```{r}
+ggplot(seurat@meta.data[which(seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),], aes(x=Genotype_2UMI, y=percent.mito, fill=Genotype_2UMI)) + geom_boxplot() + geom_signif(comparisons = list(c("MUT","WT")), map_signif_level=TRUE) + theme_classic(base_size = 17)
+
+ggplot(seurat@meta.data[which(seurat@meta.data$Genotype_2UMI %in% c("MUT","WT") & seurat@meta.data$Cell.Assignment_adj != "Mat_Mono"),], aes(x=Genotype_2UMI, y=percent.mito, fill=Genotype_2UMI)) + geom_boxplot() + geom_signif(comparisons = list(c("MUT","WT")), map_signif_level=TRUE) + theme_classic(base_size = 17)
+
+ggplot(seurat@meta.data[which(seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT") & seurat@meta.data$Cell.Assignment_adj != "Mat_Mono"),], aes(x=Genotype_2UMI, y=percent.mito, fill=Genotype_2UMI)) + geom_boxplot() + geom_signif(comparisons = list(c("MUT","WT")), map_signif_level=TRUE) + theme_classic(base_size = 17) 
+
+ggplot(seurat@meta.data[which(seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT") & seurat@meta.data$Cell.Assignment_adj != "Mat_Mono"),], aes(x=Genotype_2UMI, y=percent.mito, fill=Genotype_2UMI)) + geom_boxplot() + geom_signif(comparisons = list(c("MUT","WT")), map_signif_level=TRUE) + theme_classic(base_size = 17) + ylim(0,5)
+```
+
+##Grap gene expression 
+```{r}
+seurat <- AddModuleScore(seurat, features = c("TP53"), name="TP53.exp")
+
+colnames(seurat@meta.data)[45] <- "TP53.exp"
+seurat@meta.data
+
+data <- seurat@meta.data[which(seurat@meta.data$Cell.Assignment_adj %in% c("MonoDC","NP","IMP","HSPC","MkP","MEP","EP") & seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),]
+ggplot(data, aes(x=Cell.Assignment_adj, y=TP53.exp, group=Genotype_2UMI)) + geom_boxplot(aes(fill=factor(Genotype_2UMI), group=interaction(Cell.Assignment_adj, Genotype_2UMI))) 
+
+
+seurat.meta.data <- seurat@meta.data
+save(seurat.meta.data, version=2, file="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/MDS.seurat.meta.data.table.wNMDmodule.Rdata")
+
+
+
+seurat <- AddModuleScore(seurat, features = c("BAX"), name="BAX.exp")
+
+data <- seurat@meta.data[which(seurat@meta.data$Cell.Assignment_adj %in% c("MonoDC","NP","IMP","HSPC","MkP","MEP","EP") & seurat@meta.data$orig.ident != "MDS_P4" & seurat@meta.data$Genotype_2UMI %in% c("MUT","WT")),]
+
+library(ggpubr)
+
+ggplot(data, aes(x=Cell.Assignment_adj, y=BAX.exp1, group=Genotype_2UMI)) + geom_boxplot(aes(fill=factor(Genotype_2UMI), group=interaction(Cell.Assignment_adj, Genotype_2UMI))) 
+
+```
+
+
+
+```{r}
+
+```
+

@@ -1,0 +1,878 @@
+
+#Loading cell type specific results and pulling out significant events 
+```{r}
+##HSPC specific cryptic junctions:
+junctions.hspc <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/5.Comb_patients_ind_celltype_merge_counts/CH_combined/HSPC/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+##IMP specific cryptic junctions:
+junctions.imp <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/5.Comb_patients_ind_celltype_merge_counts/CH_combined/IMP/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+##MEP specific cryptic junctions:
+junctions.mep <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/5.Comb_patients_ind_celltype_merge_counts/CH_combined/MEP/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+##EP specific cryptic junctions:
+junctions.ep <- read.table("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/5.Comb_patients_ind_celltype_merge_counts/CH_combined/EP/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info.txt")
+
+##Adding in a minimum.threshold for supportind reads from both Mut and WT cells 
+dPSI.val <- 3
+read.thresh <- 5
+
+junctions.hspc.sub <- junctions.hspc[which(junctions.hspc$pvalue <= 0.05 & junctions.hspc$dPSI >= dPSI.val &  junctions.hspc$three.mut.cluster.cov >= read.thresh & junctions.hspc$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.hspc.sub) <- junctions.hspc.sub$intron_junction
+
+junctions.imp.sub <- junctions.imp[which(junctions.imp$pvalue <= 0.05 & junctions.imp$dPSI >= dPSI.val & junctions.imp$three.mut.cluster.cov >= read.thresh & junctions.imp$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.imp.sub) <- junctions.imp.sub$intron_junction
+
+junctions.mep.sub <- junctions.mep[which(junctions.mep$pvalue <= 0.05 & junctions.mep$dPSI >= dPSI.val & junctions.mep$three.mut.cluster.cov >= read.thresh & junctions.mep$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.mep.sub) <- junctions.mep.sub$intron_junction
+
+junctions.ep.sub <- junctions.ep[which(junctions.ep$pvalue <= 0.05 & junctions.ep$dPSI >= dPSI.val & junctions.ep$three.mut.cluster.cov >= read.thresh & junctions.ep$three.wt.cluster.cov >= read.thresh),]
+rownames(junctions.ep.sub) <- junctions.ep.sub$intron_junction
+
+junctions.hspc.list <- paste(junctions.hspc.sub$intron_junction)
+junctions.imp.list <- paste(junctions.imp.sub$intron_junction)
+junctions.mep.list <- paste(junctions.mep.sub$intron_junction)
+junctions.ep.list <- paste(junctions.ep.sub$intron_junction)
+
+junctions.hspc.list.final <- paste0(junctions.hspc.sub$gene,":",junctions.hspc.sub$intron_junction)
+junctions.imp.list.final <- paste0(junctions.imp.sub$gene,":",junctions.imp.sub$intron_junction)
+junctions.mep.list.final <- paste0(junctions.mep.sub$gene,":",junctions.mep.sub$intron_junction)
+junctions.ep.list.final <- paste0(junctions.ep.sub$gene,":",junctions.ep.sub$intron_junction)
+
+length(junctions.hspc.list)
+length(junctions.imp.list)
+length(junctions.mep.list)
+length(junctions.ep.list)
+
+
+gene <- "BAX"
+junctions.hspc[which(junctions.hspc$gene == gene),]
+junctions.imp[which(junctions.imp$gene == gene),]
+junctions.mep[which(junctions.mep$gene == gene),]
+junctions.ep[which(junctions.ep$gene == gene),]
+
+
+##Generating junction list Junctions significant in any cell type
+junctions.of.interest <- Reduce(union, list(junctions.hspc.list, junctions.imp.list, junctions.mep.list, junctions.ep.list)) 
+
+junctions.of.interest.final <- Reduce(union, list(junctions.hspc.list.final, junctions.imp.list.final, junctions.mep.list.final, junctions.ep.list.final)) 
+
+```
+
+##Creating the annotation row dataframe that also allows you to select junctions based on number of cellt ypes it is significant in.
+
+```{r}
+annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.hspc.list.final),]
+```
+
+```{r}
+annotation_row = data.frame(cryptic.junctions.full=junctions.of.interest.final)
+
+rownames(annotation_row) <- annotation_row$cryptic.junctions.full
+annotation_row$EP <- 0
+annotation_row$MEP <- 0
+annotation_row$IMP <- 0
+annotation_row$HSPC <- 0
+
+annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.hspc.list.final),]$HSPC <- 1
+annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.imp.list.final),]$IMP <- 1
+annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.mep.list.final),]$MEP <- 1
+annotation_row[which(annotation_row$cryptic.junctions.full %in% junctions.ep.list.final),]$EP <- 1
+
+#annotation_row$cell.type.site <- factor(annotation_row$cell.type.site, c("HSPC","IMP","MEP","EP"))
+annotation_row <- annotation_row[-1]
+
+annotation_row$sum <- annotation_row$EP + annotation_row$MEP + annotation_row$IMP + annotation_row$HSPC
+
+annotation_row
+
+all.examples <- rownames(annotation_row[which(annotation_row$sum > 0),])
+pan.examples <- rownames(annotation_row[which(annotation_row$sum >=3),])
+unique.examples <- rownames(annotation_row[which(annotation_row$sum == 1 | annotation_row$sum == 2),])
+
+ann_colors = list(
+  HSPC = c("light grey","red"),
+  IMP = c("light grey","red"),
+  MEP = c("light grey","red"),
+  EP = c("light grey","red")
+)
+
+```
+
+
+```{r}
+length(unique.examples)
+unique.examples
+
+
+length(pan.examples)
+pan.examples
+```
+
+
+
+##Saving the set of junctions to run the script on 
+
+```{r}
+gene.list <- unique(unlist(lapply(strsplit(junctions.of.interest.final,split= ":"), "[",1)))
+gene.list
+save(gene.list, junctions.of.interest,junctions.of.interest.final, version=2, file="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/junctions.to.use.CH.5readThresh.Rdata")
+```
+
+
+
+```{r}
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/junctions.to.use.CH.full.Rdata")
+```
+
+
+```{r}
+#No expression Data for AL133410.3
+setdiff(gene.list, rownames(ch.ont.samples.integrated@assays$RNA@data))
+length(setdiff(gene.list, rownames(ch.ont.samples.integrated@assays$RNA@data)))
+```
+
+
+
+```{r}
+
+ann_colors = list(
+  ep.fraction = c("grey",v_colors[15]),
+  mep.fraction = c("grey",v_colors[10]),
+  imp.fraction = c("grey",v_colors[5]),
+  hsc.fraction = c("grey",v_colors[1]),
+  mean.pseudotime = c("grey", "purple"),
+  mut.frac = c("grey", "orange"),
+  cell.type.site = c(HSPC = v_colors[1], IMP=v_colors[5], MEP =v_colors[10],EP=v_colors[15])
+)
+library(RColorBrewer)
+color = colorRampPalette(rev(brewer.pal(n = 7, name =
+  "RdYlBu")))(100)
+
+color
+show_col(color)
+
+library(scales)
+show_col(viridis_pal()(20))
+q_colors =  20 # for no particular reason
+v_colors = viridis(q_colors)
+v_colors
+
+```
+
+```{r}
+junctions.of.interest.final
+
+win.dPSI[[1]]
+```
+
+
+##Output from CH259+CH305 
+```{r}
+#window size of 50
+#load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.celltype.unique.bucket.50.Rdata")
+
+#window size of 100
+#load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.celltype.unique.bucket.100.Rdata")
+
+#window size of 100
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.sig.in.any.bucket.100.nCountThresh0.Rdata")
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.sig.in.any.bucket.100.nCountThresh1000.Rdata")
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.sig.in.any.bucket.100.nCountThresh1500.Rdata")
+
+#window size of 150
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.sig.in.any.bucket.150.nCountThresh0.Rdata")
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.sig.in.any.bucket.150.nCountThresh1000.Rdata")
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.sig.in.any.bucket.150.nCountThresh1500.Rdata")
+
+#window size of 200
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.sig.in.any.bucket.200.nCountThresh0.Rdata")
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.sig.in.any.bucket.200.nCountThresh1000.Rdata")
+load("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/16.Pseudotime.Window/CH.output/CH259.CH305.merged.info.sig.in.any.bucket.200.nCountThresh1500.Rdata")
+
+
+
+rownames <- junctions.of.interest.final
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"mut.psi"]) #note the added comma!
+mut.psi.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(mut.psi.per.window) = as.character(1:ncol(mut.psi.per.window))
+rownames(mut.psi.per.window) <- rownames
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"wt.psi"]) #note the added comma!
+wt.psi.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(wt.psi.per.window) = as.character(1:ncol(wt.psi.per.window))
+rownames(wt.psi.per.window) <- rownames
+
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"dPSI"]) #note the added comma!
+dPSI.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(dPSI.per.window) = as.character(1:ncol(dPSI.per.window))
+rownames(dPSI.per.window) <- rownames
+
+#dPSI.per.window[which(rowMeans(is.na(dPSI.per.window)) > 0.1), ] #(removed multiple NA's)
+
+dPSI.per.window.sub <- dPSI.per.window[which(rowMeans(is.na(dPSI.per.window)) <= 0.1), ]
+mask <- apply(dPSI.per.window.sub, 2, is.nan)
+dPSI.per.window.sub.temp <- dPSI.per.window.sub
+dPSI.per.window.sub.temp[mask] <- 0
+dPSI.per.window.sub.zscores <- as.data.frame(t(apply(dPSI.per.window.sub.temp, 1, function(x) (x-mean(x))/sd(x))))
+
+
+##Sigmoid normalization
+dPSI.per.window.normalized <- as.data.frame(t(apply(dPSI.per.window.sub.temp, 1, function(x) (x)/(1+abs(x))))) #sigmoid
+dPSI.per.window.normalized <- as.data.frame(t(apply(dPSI.per.window.sub.temp, 1, function(x) tanh(x) ))) #sigmoid
+dPSI.per.window.normalized <- as.data.frame(t(apply(dPSI.per.window.sub.temp, 1, function(x) min(x)+((max(x)-min(x))*x))))
+
+max.old <- max(dPSI.per.window.sub.temp[1,])
+min.old <- min(dPSI.per.window.sub.temp[1,])
+max.new <- 1
+min.new <- -1
+
+```
+
+
+
+```{r fig.height=1, fig.width=10}
+
+annotation_col = data.frame(ep.fraction = as.numeric(paste(ct.fractions.2["EP",])), mep.fraction = as.numeric(paste(ct.fractions.2["MEP",])), imp.fraction = as.numeric(paste(ct.fractions.2["IMP",])) ,hsc.fraction = as.numeric(paste(ct.fractions.2["HSPC",])),  mean.pseudotime = pseudotime.mean, mut.frac= mut.fraction)
+annotation_col
+
+rownames(annotation_col) = paste(1:nrow(annotation_col))
+
+cell.freq <- melt(t(annotation_col[,1:4]),var=c("cell.type",'window'))
+
+ggplot(cell.freq, aes(x = window, y = value, fill = cell.type)) + geom_col(position = "fill") + theme_void()
+
+```
+
+```{r}
+
+rownames(annotation_row[which(annotation_row$sum ==1),])
+dPSI.per.window.sub.zscores[rownames(annotation_row[which(annotation_row$sum ==1),]),]
+```
+
+
+```{r}
+shared.junctions
+```
+
+
+```{r  fig.height=12, fig.width=9}
+shared.junctions <- intersect(junctions.of.interest.final, rownames(dPSI.per.window.sub.temp))
+
+to.plot <- dPSI.per.window.sub
+
+pheatmap(to.plot, cluster_cols = F, cluster_rows = F, annotation_row = annotation_row , annotation_col = annotation_col ,color=colorRampPalette(c("navy", "white", "red"))(50), border_color=NA)
+
+#to.plot <- dPSI.per.window.sub.zscores[all.examples,]
+to.plot <- dPSI.per.window.sub.zscores[unique.examples,]
+
+to.plot <- dPSI.per.window.sub.zscores[pan.examples,]
+to.plot <- dPSI.per.window.sub[pan.examples,]
+
+#to.plot <- dPSI.per.window.sub.temp
+
+ncols <- ncol(to.plot)
+to.plot$max.column <- colnames(to.plot)[apply(to.plot,1,which.max)]
+to.plot$max.column <- as.numeric(to.plot$max.column)
+to.plot$rownames <- rownames(to.plot)
+to.plot.reordered <- to.plot %>% arrange(max.column)
+rownames(to.plot.reordered) <- to.plot.reordered$rownames
+to.plot.reordered <- to.plot.reordered[,1:ncols]
+
+paletteLength <- 50
+myColor <- colorRampPalette(c("navy", "white", "red"))(paletteLength)
+# length(breaks) == length(paletteLength) + 1
+# use floor and ceiling to deal with even/odd length pallettelengths
+myBreaks <- c(seq(min(to.plot.reordered), 0, length.out=ceiling(paletteLength/2) + 1), 
+              seq(max(to.plot.reordered)/paletteLength, max(to.plot.reordered), length.out=floor(paletteLength/2)))
+
+
+#pheatmap(to.plot.reordered, cluster_cols = F, cluster_rows = F, annotation_row = annotation_row[all.examples,-5] , annotation_col = annotation_col, annotation_colors = ann_colors, color=myColor, border_color=NA, annotation_legend=F, breaks=myBreaks)
+
+#pheatmap(to.plot.reordered, cluster_cols = F, cluster_rows = F, annotation_col = annotation_col[,5:6], annotation_colors = ann_colors, color=myColor, border_color=NA, annotation_legend=F, breaks=myBreaks)
+
+pheatmap(to.plot.reordered, cluster_cols = F, cluster_rows = F, annotation_row = annotation_row[unique.examples,-5] , annotation_col = annotation_col, annotation_colors = ann_colors, color=myColor, border_color=NA, annotation_legend=F, breaks=myBreaks)
+
+```
+
+
+
+```{r fig.height=3, fig.width=9}
+pheatmap(to.plot.reordered, cluster_cols = F, cluster_rows = F, annotation_row = annotation_row[pan.examples,-5] , annotation_col = annotation_col, annotation_colors = ann_colors, color=myColor, border_color=NA, annotation_legend=F, breaks=myBreaks)
+
+```
+
+
+
+
+```{r fig.height=3, fig.width=15}
+event <- "EIF4A2:chr3:186783639:186784428:+"
+event <- "ERGIC3:chr20:35556271:35556954:+"
+
+pheatmap(to.plot.reordered[event,], cluster_cols = F, cluster_rows = F , annotation_col = annotation_col, border_color=NA, annotation_legend = F)
+
+annotation_col
+to.plot.reordered[event,]
+annotation_row[event,-5]
+```
+
+
+
+##Candidates for individual events:
+
+```{r}
+#EIF4A2:chr3:186783639:186784428:+
+#OXA1L:chr14:22768171:22769776:+
+#SLC25A39:chr17:44322552:44322807:-
+```
+
+## ------------------------------------------ Looking at Individual Events ------------------------------------------ ##
+
+```{r}
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"cluster.cov.mut"]) #note the added comma!
+cluster.cov.mut.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(cluster.cov.mut.per.window) = as.character(1:ncol(cluster.cov.mut.per.window))
+rownames(cluster.cov.mut.per.window) <- rownames
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"cluster.cov.wt"]) #note the added comma!
+cluster.cov.wt.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(cluster.cov.wt.per.window) = as.character(1:ncol(cluster.cov.wt.per.window))
+rownames(cluster.cov.wt.per.window) <- rownames
+
+## Datatables to use
+#dPSI.per.window
+#cluster.cov.mut.per.window
+#cluster.cov.wt.per.window
+
+##If the cluster coverage is 0 in either wt or mut, remove that junction from the list 
+
+```
+
+
+```{r}
+annotation_col
+```
+
+
+```{r}
+annotation_row
+```
+
+
+
+```{r}
+junction <- "chrX:48793297:48793777:+" 
+gene <- "GATA1"
+
+#Not well covered
+junction <- "chr14:22768171:22769776:+" 
+gene <- "OXA1L"
+
+#junction <- "chr10:119582608:119588151:-"
+#gene <- "TIAL1"
+
+#junction <- "chr4:139072039:139073453:-"
+#gene <- "ELF2"
+
+junction <- "chr20:35556271:35556954:+" 
+gene <- "ERGIC3"
+
+#junction <- "chr9:136791424:136791625:+" 
+#gene <- "TMEM141"
+
+junction <- "chr1:100992754:100995109:-" 
+gene <- "DPH5"
+
+junction <- "chr3:170868201:170868297:-" 
+gene <- "RPL22L1"
+
+junction <- "chr11:64232614:64232700:+" 
+gene <- "DNAJC4"
+
+#junction <- "chr1:45012285:45012856:+" 
+#gene <- "UROD"
+
+
+junction <- "chr2:169812524:169815476:-" 
+gene <- "METTL5"
+
+junction <- "chr15:58917020:58932355:-" 
+gene <- "SLTM"
+
+junction <- "chr19:11035132:11041297:+" 
+gene <- "SMARCA4"
+
+junction <- "chr2:241335212:241335958:+" 
+gene <- "SEPT2"
+
+```
+
+```{r}
+gene
+```
+
+```{r}
+to.plot.reordered
+```
+
+
+##Ones that show highly dPSIs than in the buckets they are sig in
+```{r}
+
+##This one had very low coverage in the Diff Transcript usage - so it is really a trustworkthy sig event??
+junction <- "chr11:65572960:65573352:+" 
+gene <- "FAM89B"
+
+junction <- "chr12:113159112:113161269:-" 
+gene <- "DDX54"
+
+##The first few buckets have super low coverage - causing super inflated dPSI
+junction <- "chrX:153588454:153592505:-" 
+gene <- "CCNQ"
+
+
+junction <- "chr14:20990598:20992091:+" 
+gene <- "METTL17"
+
+
+junction <- "chr11:17295467:17296020:+" 
+gene <- "NUCB2"
+
+
+junction <- "chr10:119582608:119588151:-" 
+gene <- "TIAL1"
+
+
+#junction <- "chr14:22768171:22769776:+" 
+#gene <- "OXA1L"
+
+junction <- "chr17:44322552:44322807:-" 
+gene <- "SLC25A39"
+
+#Well covered
+junction <- "chr3:186783639:186784428:+" 
+gene <- "EIF4A2"
+
+
+junction <- "chr19:11035132:11041297:+" 
+gene <- "SMARCA4"
+
+
+junction <- "chr9:35813156:35813265:-" 
+gene <- "AL133410.3"
+
+
+
+junction <- "chr1:67424322:67424887:-" 
+gene <- "SERBP1"
+
+
+junction <- "chr1:67424977:67425082:-" 
+gene <- "SERBP1"
+
+
+
+junction <- "chr19:48960914:48961482:+" 
+gene <- "BAX"
+
+
+
+```
+
+
+
+```{r}
+
+junction.final <- paste0(gene,":",junction)
+
+#dPSI info - out[junction.final,]
+#ONT gene.expression info - gene.exp.matrix[gene,]
+
+colnames <- c("window","dPSI","mut.psi","wt.psi","ONT.Expression","ONT.MUT.Expression","ONT.WT.Expression")
+psi.per.window.data <- as.data.frame(matrix(nrow=ncol(dPSI.per.window), ncol=length(colnames)))
+rownames(psi.per.window.data) <- as.character(1:ncol(dPSI.per.window))
+colnames(psi.per.window.data) <- colnames
+
+psi.per.window.data$window <- rownames(psi.per.window.data)
+psi.per.window.data$dPSI <- as.numeric(paste(dPSI.per.window[junction.final,]))
+psi.per.window.data$mut.psi <- as.numeric(paste(mut.psi.per.window[junction.final,]))
+psi.per.window.data$wt.psi <- as.numeric(paste(wt.psi.per.window[junction.final,]))
+psi.per.window.data$ONT.Expression <- as.numeric(paste(ont.expression.per.window[gene,]))
+psi.per.window.data$ONT.MUT.Expression <- as.numeric(paste(ont.mut.expression.per.window[gene,]))
+psi.per.window.data$ONT.WT.Expression <- as.numeric(paste(ont.wt.expression.per.window[gene,]))
+psi.per.window.data$window <- factor(psi.per.window.data$window,levels = 1:nrow(psi.per.window.data))
+psi.per.window.data
+mask <- apply(psi.per.window.data, 2, is.na)
+psi.per.window.data[mask] <- 0
+psi.per.window.data
+```
+
+
+```{r}
+cor(psi.per.window.data$dPSI, psi.per.window.data$ONT.Expression, method = c("spearman"))
+```
+
+
+
+```{r }
+ExpressionColor <- "red"
+dPSIColor <- "blue"
+
+OldMax = max(psi.per.window.data$ONT.Expression)
+OldMin = min(psi.per.window.data$ONT.Expression)
+OldRange = (OldMax - OldMin)
+
+
+NewMax = max(psi.per.window.data$dPSI)
+NewMin = min(psi.per.window.data$dPSI)
+NewRange = (NewMax - NewMin)
+
+ggplot(psi.per.window.data, aes(x=window, group = 1)) + 
+  geom_line( aes(y=dPSI), color=dPSIColor) + 
+  geom_line( aes(y=(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed", color=ExpressionColor)+  
+  geom_hline(yintercept = 0, linetype = "dotted") + 
+  scale_y_continuous(
+    name = "dPSI",
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression \n (average of normalized counts)")) +
+  theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13)) +
+  ggtitle(paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction)) 
+
+
+library(grid)
+library(gridExtra)
+
+grob = grobTree(textGrob(paste("Spearman Correlation : ", round(cor(psi.per.window.data$dPSI, psi.per.window.data$ONT.Expression, method = c("spearman") ), 4)), x=0.5, y = 0.97 ,gp = gpar(col = "red", fontsize = 11)))
+
+final.plot <- ggplot(psi.per.window.data, aes(x=window, group = 1)) + 
+  geom_point(aes(y= dPSI), color=dPSIColor) +
+  stat_smooth(aes(y= dPSI), color=dPSIColor, method = "loess", formula = y ~ x, se = F, span=0.5) +
+  geom_point(aes(y =(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), color=ExpressionColor) +
+  stat_smooth(aes(y =(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed", color=ExpressionColor, method = "loess", formula = y ~ x, se = F, span=0.5)+
+  geom_hline(yintercept = 0, linetype = "dotted") + 
+  scale_y_continuous(
+    name = "dPSI",
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression \n (average of normalized counts)")) +
+  annotation_custom(grob)+
+  theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13)) +
+  ggtitle(paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction)) 
+
+final.plot
+```
+
+
+```{r}
+FeaturePlot(mds.samples.integrated, features = gene)
+FeaturePlot(samples.integrated, features = gene, reduction = "umap")
+
+```
+
+```{r fig.height=1, fig.width=8}
+extracted_cols <- lapply(win.dPSI, function(x) x[,"mut.bulk.counts"]) 
+mut.counts.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(mut.counts.per.window) = as.character(1:ncol(mut.counts.per.window))
+rownames(mut.counts.per.window) <- rownames
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"cluster.cov.mut"]) #note the added comma!
+cluster.cov.mut.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(cluster.cov.mut.per.window) = as.character(1:ncol(cluster.cov.mut.per.window))
+rownames(cluster.cov.mut.per.window) <- rownames
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"wt.bulk.counts"]) 
+wt.counts.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(wt.counts.per.window) = as.character(1:ncol(wt.counts.per.window))
+rownames(wt.counts.per.window) <- rownames
+
+extracted_cols <- lapply(win.dPSI, function(x) x[,"cluster.cov.wt"]) #note the added comma!
+cluster.cov.wt.per.window <- as.data.frame(do.call(cbind, extracted_cols))
+colnames(cluster.cov.wt.per.window) = as.character(1:ncol(cluster.cov.wt.per.window))
+rownames(cluster.cov.wt.per.window) <- rownames
+
+raw.counts <- rbind(mut.counts.per.window[junction.final,], cluster.cov.mut.per.window[junction.final,] , wt.counts.per.window[junction.final,] , cluster.cov.wt.per.window[junction.final,])
+
+raw.counts <- as.data.frame(sapply(raw.counts, as.integer))
+rownames(raw.counts) <- c("cryptic.reads.mut", "cluster.cov.mut","cryptic.reads.wt","cluster.cov.wt")
+
+pheatmap(raw.counts, cluster_cols = F, cluster_rows = F, legend=F, display_numbers = T, number_format= "%.f",number_color = "blue",color=colorRampPalette(c("white", "white"))(50), show_rownames = T, show_colnames = F, gaps_row = c(2))
+
+
+psi.per.window.data$p.val <- NA
+
+for (window in 1:ncol(raw.counts)){
+  contingency.table <- cbind(raw.counts[1:2,window], raw.counts[3:4,window])
+  contingency.table[2,] <- contingency.table[2,] - contingency.table[1,]
+  result <- fisher.test(contingency.table)
+  print(result$p.value)
+  psi.per.window.data[window,]$p.val <- result$p.value
+}
+
+result
+
+#psi.per.window.data
+#psi.per.window.data$window <- as.numeric(psi.per.window.data$window)
+#psi.per.window.data$start <- psi.per.window.data$window - 0.5
+#psi.per.window.data$end <- psi.per.window.data$window + 0.5
+
+```
+
+
+```{r fig.height=0.5, fig.width=8}
+paletteLength <- 50
+myColor <- colorRampPalette(c("navy", "white", "red"))(paletteLength)
+# length(breaks) == length(paletteLength) + 1
+# use floor and ceiling to deal with even/odd length pallettelengths
+myBreaks <- c(seq(min(psi.per.window.data$p.val), 0.05, length.out=ceiling(paletteLength/2) + 1), 
+              seq(max(psi.per.window.data$p.val)/paletteLength, max(psi.per.window.data$p.val), length.out=floor(paletteLength/2)))
+
+pheatmap(t(psi.per.window.data$p.val), cluster_cols = F, cluster_rows = F,  breaks=myBreaks, display_numbers = T, number_format= "%.3f",number_color = "black")
+```
+
+
+
+##Doing one plot with mut exp + mut psi & wt exp + wt psi
+
+```{r fig.height=5, fig.width=9}
+
+OldMax = max(psi.per.window.data$ONT.MUT.Expression, psi.per.window.data$ONT.WT.Expression)
+OldMin = min(psi.per.window.data$ONT.MUT.Expression, psi.per.window.data$ONT.WT.Expression)
+OldRange = (OldMax - OldMin)
+
+NewMax = max(psi.per.window.data$mut.psi, psi.per.window.data$wt.psi)
+NewMin = min(psi.per.window.data$mut.psi, psi.per.window.data$wt.psi)
+NewRange = (NewMax - NewMin)
+
+ggplot(psi.per.window.data, aes(x=window, group = 1)) + 
+  geom_line(aes(y=wt.psi, linetype = "WT"), color="blue") + 
+  geom_line(aes(y=mut.psi, linetype = "MUT"), color="blue") + 
+  #geom_hline(yintercept = 0, linetype = "dotted") + 
+  geom_line(aes(y=(((ONT.WT.Expression - OldMin) * NewRange) / OldRange) + NewMin, linetype = "WT"),color="red") +
+  geom_point(aes(y=(((ONT.WT.Expression - OldMin) * NewRange) / OldRange) + NewMin),color="red") +
+  geom_line(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin, linetype = "MUT"),color="red") +
+  geom_point(aes(y=(((ONT.MUT.Expression - OldMin) * NewRange) / OldRange) + NewMin),color="red") +
+  scale_linetype_manual(name = "Genotype",
+                     breaks = c("WT","MUT"),
+                     values = c("WT" = "solid", "MUT" = "dashed") )+
+  scale_y_continuous(
+    name = "PSI",
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression \n (average of normalized counts)")) +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13))+
+  ggtitle(paste0("PSI and Expression values for ", gene ," cryptic junction - ", junction)) 
+```
+
+
+```{r}
+ont.total.raw.counts.per.window 
+```
+
+
+##Why is the MUT expression higher in certain windows
+
+```{r}
+
+thresh <- 0
+MUT.info <- as.data.frame(matrix(nrow=length(win.dPSI), ncol=9))
+rownames(MUT.info) <- 1:length(win.dPSI)
+colnames(MUT.info) <- c("total.raw.counts","mean.exp","total.num.cells","num_norm_>_0","pct_with_gene","num_reads_<_thresh","num_reads_>=_thresh", "num_norm_>_0_reads_<_thresh","pct_reads_<_thresh")
+
+for (i in 1:length(win.dPSI)){
+  window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[i]]
+  MUT.info[i,"total.raw.counts"] <- sum(window.info[which(window.info$genotype =="MUT" & window.info$total >= thresh),]$gene.counts)
+  MUT.info[i,"mean.exp"] <- mean(window.info[which(window.info$genotype =="MUT"),]$norm.counts)
+  MUT.info[i,"total.num.cells"] <- nrow(window.info[which(window.info$genotype =="MUT"),])
+  MUT.info[i,"num_norm_>_0"] <- nrow(window.info[which(window.info$genotype =="MUT" & window.info$norm.counts > 0),])
+  MUT.info[i,"pct_with_gene"] <- (MUT.info[i,"num_norm_>_0"]/MUT.info[i,"total.num.cells"])*100
+  MUT.info[i,"num_reads_<_thresh"] <- nrow(window.info[which(window.info$genotype =="MUT" & window.info$total < thresh),])
+  MUT.info[i,"num_reads_>=_thresh"] <- nrow(window.info[which(window.info$genotype =="MUT" & window.info$total >= thresh),])
+  MUT.info[i,"num_norm_>_0_reads_<_thresh"] <- nrow(window.info[which(window.info$genotype =="MUT" & window.info$norm.counts > 0 & window.info$total < thresh),])
+  MUT.info[i,"pct_reads_<_thresh"] <- MUT.info[i,"num_reads_<_thresh"]/MUT.info[i,"total.num.cells"] *100
+  
+}
+
+MUT.info[,c("total.raw.counts", "total.num.cells","pct_with_gene","num_reads_>=_thresh", "pct_reads_<_thresh")]
+
+```
+
+
+```{r}
+WT.info <- as.data.frame(matrix(nrow=length(win.dPSI), ncol=9))
+rownames(WT.info) <- 1:length(win.dPSI)
+colnames(WT.info) <- c("total.raw.counts","mean.exp","total.num.cells","num_norm_>_0","pct_with_gene","num_reads_<_thresh","num_reads_>=_thresh", "num_norm_>_0_reads_<_thresh", "pct_reads_<_thresh")
+
+for (i in 1:length(win.dPSI)){
+  window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[i]]
+  WT.info[i,"total.raw.counts"] <- sum(window.info[which(window.info$genotype =="WT" & window.info$total >= thresh),]$gene.counts)
+  WT.info[i,"mean.exp"] <- mean(window.info[which(window.info$genotype =="WT"),]$norm.counts)
+  WT.info[i,"total.num.cells"] <- nrow(window.info[which(window.info$genotype =="WT"),])
+  WT.info[i,"num_norm_>_0"] <- nrow(window.info[which(window.info$genotype =="WT" & window.info$norm.counts > 0),])
+  WT.info[i,"pct_with_gene"] <- (WT.info[i,"num_norm_>_0"]/WT.info[i,"total.num.cells"])*100
+  WT.info[i,"num_reads_<_thresh"] <- nrow(window.info[which(window.info$genotype =="WT" & window.info$total < thresh),])
+  WT.info[i,"num_reads_>=_thresh"] <- nrow(window.info[which(window.info$genotype =="WT" & window.info$total >= thresh),])
+  WT.info[i,"num_norm_>_0_reads_<_thresh"] <- nrow(window.info[which(window.info$genotype =="WT" & window.info$norm.counts > 0 & window.info$total < thresh),])
+  WT.info[i,"pct_reads_<_thresh"] <- WT.info[i,"num_reads_<_thresh"]/WT.info[i,"total.num.cells"]*100
+}
+
+WT.info[,c("total.raw.counts", "total.num.cells","pct_with_gene","num_reads_>=_thresh", "pct_reads_<_thresh")]
+
+
+```
+
+
+```{r fig.height=1, fig.width=8}
+raw.exp.ont.counts <- rbind(MUT.info$total.raw.counts, WT.info$total.raw.counts)
+rownames(raw.exp.ont.counts) <- c("raw.count.mut","raw.count.wt")
+raw.exp.ont.counts
+
+pheatmap(raw.exp.ont.counts, cluster_cols = F, cluster_rows = F, legend=F, display_numbers = T, number_format= "%.f",number_color = "red",color=colorRampPalette(c("white", "white"))(50), show_rownames = T, show_colnames = F, gaps_row = c(1))
+```
+
+
+
+```{r fig.height=1, fig.width=8}
+num.cells.per.window <- rbind(WT.info$`num_reads_>=_thresh` ,MUT.info$`num_reads_>=_thresh`)
+
+rownames(num.cells.per.window) <- c("num.wt.cells","num.mut.cells")
+num.cells.per.window
+
+pheatmap(num.cells.per.window, cluster_cols = F, cluster_rows = F, legend=F, display_numbers = T, number_format= "%.f",number_color = "green",color=colorRampPalette(c("white", "white"))(50), show_rownames = T, show_colnames = F, gaps_row = c(1))
+```
+
+
+```{r}
+window.info
+```
+
+
+
+
+```{r}
+window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[6]]
+window.info[which(window.info$genotype =="MUT" & window.info$used ==1),]
+mean(window.info[which(window.info$genotype =="MUT" & window.info$used ==1),]$norm.counts)
+window.info[which(window.info$genotype =="WT" & window.info$used ==1),]
+mean(window.info[which(window.info$genotype =="WT" & window.info$used ==1),]$norm.counts)
+
+```
+
+
+
+```{r}
+window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[1]]
+window.info[which(window.info$genotype =="MUT"),] %>% arrange(desc(norm.counts))
+window.info[which(window.info$genotype =="WT"),] %>% arrange(desc(norm.counts))
+
+window.info[which(window.info$genotype =="MUT" & window.info$norm.counts > 10),] %>% arrange(desc(norm.counts))
+window.info[which(window.info$genotype =="MUT" & window.info$norm.counts > 10 & window.info$nCount_RNA < 1000),] %>% arrange(desc(norm.counts))
+window.info[which(window.info$genotype =="WT" & window.info$norm.counts > 10),] %>% arrange(desc(norm.counts))
+window.info[which(window.info$genotype =="WT" & window.info$norm.counts > 10 & window.info$nCount_RNA < 1000),] %>% arrange(desc(norm.counts))
+
+mean(window.info[which(window.info$genotype =="MUT"),]$norm.counts)
+mean(window.info[which(window.info$genotype =="WT"),]$norm.counts)
+```
+
+```{r}
+window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[6]]
+window.info[which(window.info$genotype =="MUT"),]
+window.info[which(window.info$genotype =="WT"),]
+
+window.info[which(window.info$genotype =="MUT" & window.info$norm.counts > 10),] %>% arrange(desc(norm.counts))
+window.info[which(window.info$genotype =="WT" & window.info$norm.counts > 10),] %>% arrange(desc(norm.counts))
+
+mean(window.info[which(window.info$genotype =="MUT"),]$norm.counts)
+mean(window.info[which(window.info$genotype =="WT"),]$norm.counts)
+```
+
+
+```{r}
+window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[10]]
+window.info[which(window.info$genotype =="MUT"),]
+window.info[which(window.info$genotype =="WT"),]
+
+window.info[which(window.info$genotype =="MUT" & window.info$norm.counts > 10),] %>% arrange(desc(norm.counts))
+window.info[which(window.info$genotype =="WT" & window.info$norm.counts > 10),] %>% arrange(desc(norm.counts))
+
+mean(window.info[which(window.info$genotype =="MUT"),]$norm.counts)
+mean(window.info[which(window.info$genotype =="WT"),]$norm.counts)
+```
+
+
+##Typically about 10% of the cells have relatively high expression and low nCount_RNA
+```{r}
+
+```
+
+
+
+```{r}
+
+window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[10]]
+window.info[which(window.info$genotype =="MUT" & window.info$used ==1),]
+mean(window.info[which(window.info$genotype =="MUT" & window.info$used ==1),]$norm.counts)
+window.info[which(window.info$genotype =="WT" & window.info$used ==1),]
+mean(window.info[which(window.info$genotype =="WT" & window.info$used ==1),]$norm.counts)
+
+```
+
+
+
+```{r}
+#12-18
+window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[20]]
+window.info[which(window.info$genotype =="MUT"),] %>% arrange(desc(norm.counts))
+window.info[which(window.info$genotype =="WT"),] %>% arrange(desc(norm.counts))
+```
+
+
+
+##Scatter Plot - Is there a correlation between total read counts and normalized gene expressoin values
+
+```{r fig.height=20, fig.width=25}
+
+plots <- list()
+plots_mut <- list()
+plots_wt <- list()
+
+for (i in 1:length(win.dPSI)){
+  window.info <- ont.raw.counts.per.cell.per.window.per.gene[[gene]][[i]]
+  plots[[i]] <- ggplot(window.info[which(window.info$used ==1),], aes(x=total, y=norm.counts, color = genotype)) + geom_point() + ggtitle(paste0("Window ", i))
+  plots_mut[[i]] <- ggplot(window.info[which(window.info$genotype =="MUT"),], aes(x=total, y=norm.counts, color = genotype)) + geom_point() + ggtitle(paste0("Window ", i)) 
+  plots_wt[[i]] <- ggplot(window.info[which(window.info$genotype =="WT"),], aes(x=total, y=norm.counts, color = genotype)) + geom_point() + ggtitle(paste0("Window ", i))
+}
+
+do.call(grid.arrange, plots)
+do.call(grid.arrange, plots_mut)
+do.call(grid.arrange, plots_wt)
+
+```
+
+
+```{r fig.height=5, fig.width=10}
+ggplot(psi.per.window.data, aes(x=window, group = 1)) + 
+  geom_point(aes(y= dPSI), color=dPSIColor) +
+  stat_smooth(aes(y= dPSI), color=dPSIColor, method = "loess", formula = y ~ x, se = F, span=0.5) +
+  geom_point(aes(y =(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), color=ExpressionColor) +
+  stat_smooth(aes(y =(((ONT.Expression - OldMin) * NewRange) / OldRange) + NewMin), linetype = "dashed", color=ExpressionColor, method = "loess", formula = y ~ x, se = F, span=0.5)+
+  geom_hline(yintercept = 0, linetype = "dotted") + 
+  geom_rect(aes(xmin = start, xmax = end, fill = p.val), 
+    ymin = -Inf, ymax = Inf, alpha = 0.2, colour = "grey50")+
+  scale_y_continuous(
+    name = "dPSI",
+    sec.axis = sec_axis(~(((.-NewMin)*OldRange)/NewRange) + OldMin , name="ONT Expression \n (average of normalized counts)")) +
+  theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5, size = 14), 
+        axis.title.y = element_text(color =dPSIColor , size=13), 
+        axis.title.y.right = element_text(color = ExpressionColor, size=13)) +
+  ggtitle(paste0("dPSI and Expression for ", gene ," cryptic junction - ", junction)) 
+
+```
+

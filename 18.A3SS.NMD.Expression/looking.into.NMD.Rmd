@@ -1,0 +1,51 @@
+
+
+```{r}
+nmd.info <- read.csv("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/7.Permutation_junction_output/6.Comb_patients_2WT/5_read_threshold/MDS_P5_P6/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info_w_NMD.csv")
+
+
+
+nmd.info <- read.csv("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/18.A3SS.NMD.Expression/logOR_within_cell_type_ONLY_CRYPTIC_3P_Junctions_with_threshold_info_w_NMD_faster_with_start_codon_correction.csv")
+
+
+table(nmd.info$NMD)
+```
+
+
+```{r}
+
+table(nmd.info[which(nmd.info$dPSI >0 & nmd.info$pvalue < 0.05  & nmd.info$NMDVerdict %in% c("not NMD","NMD")),]$NMDVerdict)
+
+
+length(unique(nmd.info[which(nmd.info$dPSI >0 & nmd.info$pvalue < 0.05  & nmd.info$NMDVerdict %in% c("not NMD","NMD")),]$gene))
+
+table(nmd.info[which(nmd.info$dPSI <0 & nmd.info$pvalue < 0.05   & nmd.info$NMDVerdict %in% c("not NMD","NMD")),]$NMDVerdict)
+
+```
+
+```{r}
+table(nmd.info[which(nmd.info$pvalue <= 0.05),]$NMD)
+```
+
+```{r}
+nmd.info[which(nmd.info$NMD =="NMD"),]
+```
+
+
+
+```{r}
+nmd.info[which(nmd.info$NMD =="NMD" & nmd.info$gene =="DPH5"),]
+
+nmd.info[which(nmd.info$gene =="APPL2"),]
+```
+
+
+
+```{r}
+junctions.annotations <- read.csv("/gpfs/commons/groups/landau_lab/SF3B1_splice_project/9.Splice_pipeline_example_run/MDS_P5_P6_2WT/5_read_threshold/diff_transcript_combined_merge_counts_2WT/combined_metadata/annotations_MDS_combined.csv")
+
+
+
+junctions.annotations[which(junctions.annotations$gene == "DPH5"),]
+```
+
