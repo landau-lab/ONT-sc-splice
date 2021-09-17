@@ -20,7 +20,7 @@ echo $PATH
 
 ##### input arguments/ requirements 
 ## working directory must contain a folder labeled input_files 
-## within input_files folder there are 2 folders
+## within input_files folder there are 3 folders
 ## 1.ONT_fastq -starts out empty but unzipped fastq is copied here 
 ## 2.short_read_files - contains barcodes.tsv (must be unzipped)  and possorted_genome_bam.bam and possorted_genome_bam.bam.bai from cellranger outs folder
 
@@ -169,7 +169,7 @@ if [ ! -f "$workdir"/output_files/sicelore_outputs/polyADone.txt ]
 then
     {
     echo "scanning polyA"
-    java -jar /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeReadScanner-0.5.jar -i "$workdir"/input_files/1.ONT_fastq/"$sample_name".fastq -o "$workdir"/output_files/sicelore_outputs
+    #java -jar /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeReadScanner-0.5.jar -i "$workdir"/input_files/1.ONT_fastq/"$sample_name".fastq -o "$workdir"/output_files/sicelore_outputs
     echo "polyA scan done" > "$workdir"/output_files/sicelore_outputs/polyADone.txt
     } || {
     echo "polyA scan failed"
@@ -183,7 +183,7 @@ fi
 ##if the file exists and skips the step if it does. That way, if the pipeline
 ##is run multiple times, it can skip the 10x parsing step
 ##split this out so that it runs after parallel to other tasks
-
+    
 if [ ! -f "$workdir"/input_files/2.short_read_files/"$sample_name"_parsed_for_Nanopore.obj ]
 then
     echo "parsing 10X object"
@@ -194,18 +194,22 @@ then
     cd "$workdir"/input_files/2.short_read_files/10X_parsing_files
     cat > "$sample_name"_10X_parsing.sh <<EOF
 #!/bin/bash
+
 #SBATCH --job-name=10x_parsing
 #SBATCH --mem-per-cpu=100G
 #SBATCH --partition=pe2
 #SBATCH --output=stderror_%j.log
 #SBATCH --error=stderror_%j.log
 #SBATCH --ntasks=5
+
 java -Xmx500g -jar /gpfs/commons/home/ahawkins/sicelore/Jar/IlluminaParser-1.0.jar --inFileIllumina $bam --tsv $barcodes --outFile $parsedobj --cellBCflag CB --umiFlag UB --geneFlag GN
+
 EOF
     
     sbatch --job-name="$sample_name"_10X_parsing "$sample_name"_10X_parsing.sh
 
 else
+    parsedobj="$workdir"/input_files/2.short_read_files/"$sample_name"_parsed_for_Nanopore.obj
     echo "10x object parsing previously completed. running analyis with existing files"
 fi
 
@@ -269,11 +273,11 @@ then
 #!/bin/bash
 
 #SBATCH --job-name=Sicelore_2
-#SBATCH --mem=100g
-#SBATCH --partition=pe2
+#SBATCH --mem=100G
+#SBATCH --partition=bigmem,pe2
 #SBATCH --output=err_and_out/"$i"_stdout_%j.log
 #SBATCH --error=err_and_out/"$i"_stderror_%j.log
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=5
 
 source /etc/profile.d/modules.sh
 module load samtools
@@ -294,7 +298,7 @@ samtools index "$i".sub.GE.bam
 java -jar -Xmx200g /gpfs/commons/home/ahawkins/sicelore/Jar/Sicelore-1.0.jar AddBamReadSequenceTag I="$i".sub.GE.bam O="$i".sub.GEUS.bam FASTQ="$i".sub.fastq
 samtools index "$i".sub.GEUS.bam
 
-java -jar -Xmx300g /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeBC_UMI_finder-1.0.jar -i "$i".sub.GEUS.bam -o "$i".sub.GEUS10xAttributes.bam -k $parsedobj --maxUMIfalseMatchPercent 2 --maxBCfalseMatchPercent 5 --ncpu 10 --logFile "$i".sub_NanoporeBC_UMI_finder.log
+java -jar -Xmx500g /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeBC_UMI_finder-1.0.jar -i "$i".sub.GEUS.bam -o "$i".sub.GEUS10xAttributes.bam -k $parsedobj --maxUMIfalseMatchPercent 2 --maxBCfalseMatchPercent 5 --ncpu 10 --logFile "$i".sub_NanoporeBC_UMI_finder.log
 
 EOF
 
@@ -323,4 +327,3 @@ junc_calling=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_fi
 
 #diff_transcript=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/diff_transcript_usage_scripts/diff_transcript_pipeline.sh "$workdir"/output_files $run_files "$workdir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_all.introns.info.w.primary.annotations.txt "$workdir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_perind_numbers.counts.txt  $genotype_info $pattern $sample_name $nperm))
 '
-
