@@ -14,7 +14,7 @@ module load samtools
 
 module load racon
 
-PATH=$PATH:~/spoa/build/bin/
+PATH=$PATH:/gpfs/commons/home/ahawkins/spoa/build/bin/
 PATH=$PATH:/gpfs/commons/home/gmullokandov/software/minimap2-2.17_x64-linux/minimap2
 echo $PATH
 
@@ -28,11 +28,13 @@ workdir=$1 #working directory where all output files will be
 fastq=$2 #full path to fastq
 fastqdir=$3
 sample_name=$4
-run_files=$5 ## path where repo is located 
-genotype_info=$6
-pattern=$7
-nperm=$8
+run_files=$5 ##location where all scripts are located
+#genotype_info=$6
+#pattern=$7
+#nperm=$8
 ##barcodes=$8 #full path to barcodes file 
+
+polyAwin=150
 
 echo $sample_name
 
@@ -169,7 +171,7 @@ if [ ! -f "$workdir"/output_files/sicelore_outputs/polyADone.txt ]
 then
     {
     echo "scanning polyA"
-    #java -jar /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeReadScanner-0.5.jar -i "$workdir"/input_files/1.ONT_fastq/"$sample_name".fastq -o "$workdir"/output_files/sicelore_outputs
+    java -jar /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeReadScanner-0.5.jar -i "$workdir"/input_files/1.ONT_fastq/"$sample_name".fastq -o "$workdir"/output_files/sicelore_outputs -w "$polyAwin"
     echo "polyA scan done" > "$workdir"/output_files/sicelore_outputs/polyADone.txt
     } || {
     echo "polyA scan failed"
@@ -196,11 +198,13 @@ then
 #!/bin/bash
 
 #SBATCH --job-name=10x_parsing
-#SBATCH --mem-per-cpu=75G
+#SBATCH --mem-per-cpu=100G
 #SBATCH --partition=pe2
 #SBATCH --output=stderror_%j.log
 #SBATCH --error=stderror_%j.log
 #SBATCH --ntasks=5
+
+module load java/1.9
 
 java -Xmx500g -jar /gpfs/commons/home/ahawkins/sicelore/Jar/IlluminaParser-1.0.jar --inFileIllumina $bam --tsv $barcodes --outFile $parsedobj --cellBCflag CB --umiFlag UB --geneFlag GN
 
@@ -265,19 +269,21 @@ do
 
 if [ -f "$workdir"/output_files/sicelore_outputs/"$i".sub.fastq ]
 then
-    filename="$workdir"/output_files/sicelore_outputs/"$i".sub.fastq
-    size=$(stat -c %s $filename)
-    if [ $size>0 ]
+    if [ ! -f "$workdir"/output_files/sicelore_outputs/"$i".sub.GEUS10xAttributes.bam ]
     then
-        cat > "$sample_name"_"$i"_sicelore_2.sh <<EOF
+        filename="$workdir"/output_files/sicelore_outputs/"$i".sub.fastq
+        size=$(stat -c %s $filename)
+        if (( $size>0 ))
+        then
+            cat > "$sample_name"_"$i"_sicelore_2.sh <<EOF
 #!/bin/bash
 
 #SBATCH --job-name=Sicelore_2
-#SBATCH --mem-per-cpu=75G
-#SBATCH --partition=pe2
+#SBATCH --mem=300G
+#SBATCH --partition=bigmem,pe2
 #SBATCH --output=err_and_out/"$i"_stdout_%j.log
 #SBATCH --error=err_and_out/"$i"_stderror_%j.log
-#SBATCH --ntasks=5
+#SBATCH --cpus-per-task=5
 
 source /etc/profile.d/modules.sh
 module load samtools
@@ -287,26 +293,28 @@ module load java/1.9
 sample_name=$4
 parsedobj="$1"/input_files/2.short_read_files/"$sample_name"_parsed_for_Nanopore.obj
 
-/gpfs/commons/home/gmullokandov/software/minimap2-2.17_x64-linux/minimap2 -ax splice -uf --MD --secondary=no --sam-hit-only -t 20 --junc-bed /gpfs/commons/home/pchamely/SequencingData/CH_dataset_02_27_20/ONT-GEX-CH305/smart_seq_alljunctions.bed /gpfs/commons/home/gmullokandov/software/ref_genome/GRCh38.p12.mmi "$i".sub.fastq > "$i".sub.sam
+/gpfs/commons/home/gmullokandov/software/minimap2-2.17_x64-linux/minimap2 -ax splice -uf --MD --secondary=no --sam-hit-only -t 20 --junc-bed /gpfs/commons/home/gmullokandov/software/sicelore/Gencode/gencode.v31.hg38.junctions.bed /gpfs/commons/home/gmullokandov/software/ref_genome/GRCh38.p12.mmi "$i".sub.fastq > "$i".sub.sam
 samtools view -Sb "$i".sub.sam -o "$i".sub.unsorted.bam
 samtools sort "$i".sub.unsorted.bam -o "$i".sub.bam
 samtools index "$i".sub.bam
 
-java -jar -Xmx200g /gpfs/commons/home/ahawkins/sicelore/Jar/Sicelore-1.0.jar AddGeneNameTag I="$i".sub.bam O="$i".sub.GE.bam REFFLAT=/gpfs/commons/home/gmullokandov/software/ref_genome/gencode.v31.refFlat GENETAG=GE ALLOW_MULTI_GENE_READS=true USE_STRAND_INFO=true VALIDATION_STRINGENCY=SILENT
+java -jar -Xmx100g /gpfs/commons/home/ahawkins/sicelore/Jar/Sicelore-1.0.jar AddGeneNameTag I="$i".sub.bam O="$i".sub.GE.bam REFFLAT=/gpfs/commons/home/gmullokandov/software/ref_genome/gencode.v31.refFlat GENETAG=GE ALLOW_MULTI_GENE_READS=true USE_STRAND_INFO=true VALIDATION_STRINGENCY=SILENT
 samtools index "$i".sub.GE.bam
 
-java -jar -Xmx200g /gpfs/commons/home/ahawkins/sicelore/Jar/Sicelore-1.0.jar AddBamReadSequenceTag I="$i".sub.GE.bam O="$i".sub.GEUS.bam FASTQ="$i".sub.fastq
+java -jar -Xmx100g /gpfs/commons/home/ahawkins/sicelore/Jar/Sicelore-1.0.jar AddBamReadSequenceTag I="$i".sub.GE.bam O="$i".sub.GEUS.bam FASTQ="$i".sub.fastq
 samtools index "$i".sub.GEUS.bam
 
-java -jar -Xmx300g /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeBC_UMI_finder-1.0.jar -i "$i".sub.GEUS.bam -o "$i".sub.GEUS10xAttributes.bam -k $parsedobj --maxUMIfalseMatchPercent 2 --maxBCfalseMatchPercent 5 --ncpu 10 --logFile "$i".sub_NanoporeBC_UMI_finder.log
+java -jar -Xmx300g /gpfs/commons/home/ahawkins/sicelore/Jar/NanoporeBC_UMI_finder-1.0.jar -i "$i".sub.GEUS.bam -o "$i".sub.GEUS10xAttributes.bam -k $parsedobj --maxUMIfalseMatchPercent 2 --maxBCfalseMatchPercent 5 --ncpu 5 -polyawin "$polyAwin" --logFile "$i".sub_NanoporeBC_UMI_finder.log
 
 EOF
 
-    sicelore_jobids+=($(sbatch --job-name="$sample_name" "$sample_name"_"$i"_sicelore_2.sh))
+        sicelore_jobids+=($(sbatch --job-name="$sample_name" "$sample_name"_"$i"_sicelore_2.sh))
+        fi
+    else
+    echo "analysis previously run on $i.sub.fastq. Using previous outputs"
     fi
 fi
 done
-exit
 
 ### after this is complete then merge files and run second script to merge 
 
@@ -314,14 +322,14 @@ exit
 
 #sbatch  /gpfs/commons/groups/landau_lab/ahawkins/MDS_ONT_splice/ONT_processing_pipeline/sicelore_scripts/2.sicelore_part2/sicelore_part2.sh "$workdir"/output_files/sicelore_outputs $sample_name $workdir/output_files/sicelore_outputs/temp
 
-sic_part2=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/sicelore/sicelore_part2.sh "$workdir"/output_files/sicelore_outputs $sample_name $workdir/output_files/sicelore_outputs/temp))
+sic_part2=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/sicelore/sicelore_part2.gencode.ref.sh "$workdir"/output_files/sicelore_outputs $sample_name $workdir/output_files/sicelore_outputs/temp))
 
 cd $workdir
 
 ## step 5: Junction calling and annotation 
-#sbatch --job-name="$sample_name" "$run_files"/leafcutter_scripts/junc_calling_pipeline.sh "$workdir"/output_files "$workdir"/output_files/sicelore_outputs/"$sample_name"_consensus.sorted.tags.GE.bam $sample_name "$run_files"
+#sbatch --job-name="$sample_name" "$run_files"/leafcutter_scripts/junc_calling_pipeline.sh "$workdir"/output_files "$workdir"/output_files/sicelore_outputs/"$sample_name"_consensus.sorted.tags.GE.bam $sample_name "$run_files"/bin
 
-junc_calling=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/junction_annotation/junc_calling_pipeline.sh "$workdir"/output_files "$workdir"/output_files/sicelore_outputs/"$sample_name"_consensus.sorted.tags.GE.bam $sample_name "$run_files"))
+junc_calling=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/junction_annotation/junc_calling_pipeline.sh "$workdir"/output_files "$workdir"/output_files/sicelore_outputs/"$sample_name"_consensus.sorted.tags.GE.bam $sample_name "$run_files"/bin))
 
 ## step 6: Differential transcript usage (with permutations within cell types)
 

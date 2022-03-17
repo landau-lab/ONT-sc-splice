@@ -132,13 +132,13 @@ done
 
 #sbatch /gpfs/commons/groups/landau_lab/ahawkins/MDS_ONT_splice/ONT_processing_pipeline/sicelore_scripts/2.sicelore_part2/sicelore_part2.sh "$workdir"/output_files/sicelore_outputs $sample_name $workdir/output_files/sicelore_outputs/temp
 
-sic_part2=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/sicelore_scripts/sicelore_part2.sh "$workdir"/output_files/sicelore_outputs $sample_name $workdir/output_files/sicelore_outputs/temp))
+sic_part2=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/sicelore/sicelore_part2.sh "$workdir"/output_files/sicelore_outputs $sample_name $workdir/output_files/sicelore_outputs/temp))
 
 ## step 5: Junction calling and annotation 
 
-junc_calling=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/leafcutter_scripts/junc_calling_pipeline.sh "$workdir"/output_files "$workdir"/output_files/sicelore_outputs/"$sample_name"_consensus.sorted.tags.GE.bam $sample_name $run_files/bin))
+junc_calling=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/junction_annotation/junc_calling_pipeline.sh "$workdir"/output_files "$workdir"/output_files/sicelore_outputs/"$sample_name"_consensus.sorted.tags.GE.bam $sample_name $run_files/bin))
 
 ## step 6: Differential transcript usage (with permutations within cell types)
 
-diff_transcript=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/diff_transcript_usage_scripts/diff_transcript_pipeline.sh "$workdir"/output_files $run_files "$workdir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_all.introns.info.w.primary.annotations.txt "$workdir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_perind_numbers.counts.txt  $genotype_info $pattern $sample_name $nperm))
+diff_transcript=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/diff_transcript_usage/diff_transcript_pipeline.sh "$workdir"/output_files $run_files "$workdir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_all.introns.info.w.primary.annotations.txt "$workdir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_perind_numbers.counts.txt  $genotype_info $pattern $sample_name $nperm))
 
