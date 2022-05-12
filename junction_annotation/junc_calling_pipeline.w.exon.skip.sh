@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=junc_annot
-#SBATCH --partition=bigmem
+#SBATCH --partition=bigmem,pe2
 #SBATCH --mail-type=NONE
 #SBATCH --mem=200g
 #SBATCH --output=junc_annot_stdout_%j.log
@@ -14,21 +14,19 @@
 output_location=$1
 input_bam=$2
 patient_run=$3
-run_files=$4 # path to repo 
+run_files=$4
 
-junc_ann_scripts_dir=""$run_files"/junction_annotation"
-
-mkdir "$output_location"/"$patient_run"_output
+#mkdir "$output_location"/"$patient_run"_output
 
 ##### ----------------------- Generate Intron/3p/5p databases from GTF file (only need to do this once)  ----------------------- #####
 
-mkdir $junc_ann_scripts_dir/annotation_reference
+#mkdir "$run_files"/annotation_reference
 
 #Format: path/to/leafcutter/leafviz/gtf2leafcutter.pl -o path/to/output_files/prefix path/to/reference_gtf
 
 #/gpfs/commons/home/gmullokandov/software/leafcutter/leafviz/gtf2leafcutter.pl -o "$run_files"/annotation_reference/leafviz "$run_files"/gencode.v31.basic.annotation.gtf
 
-annotation_code="$junc_ann_scripts_dir/annotation_reference/leafviz"
+annotation_code=""$run_files"/annotation_reference/leafviz"
 
 
 ##### ----------------------- Run the python junction calling script ----------------------- #####
@@ -42,7 +40,7 @@ cd $output_location
 mkdir leafcutter_outputs
 cd ./leafcutter_outputs
 
-python "$junc_ann_scripts_dir"/bin/count_introns_ONT.py $input_bam "$patient_run"_counts_sc_txt.gz
+python "$run_files"/count_introns_ONT.py $input_bam "$patient_run"_counts_sc_txt.gz
 echo "junction calling done" 
 
 ##### ----------------------- Run the pre-processing scripts ----------------------- #####
@@ -56,17 +54,22 @@ mkdir "$patient_run"_output
 
 #Format: Rscript junc_calling_script.R path/to/*_counts_sc_txt.gz path/to/output_folder patient_ID path/to/annotation_code/prefix"
 
-Rscript "$junc_ann_scripts_dir"/bin/junc_calling_script.R "$patient_run"_counts_sc_txt.gz "$patient_run"_output "$patient_run" "$annotation_code"
+Rscript "$run_files"/junc_calling_script.R "$patient_run"_counts_sc_txt.gz "$patient_run"_output "$patient_run" "$annotation_code"
 
 echo "Done" 
 
 ##### ----------------------- Run Lloyd's annotation script  ----------------------- #####
 conda deactivate
-scp "$junc_ann_scripts_dir"/annotation_reference/leafviz_all_introns.bed.gz "$patient_run"_output/
+export PATH="/gpfs/commons/home/lkluegel/miniconda3/bin:$PATH"
+
+scp "$run_files"/annotation_reference/leafviz_all_introns.bed.gz "$patient_run"_output/
 gunzip "$output_location"/leafcutter_outputs/"$patient_run"_output/leafviz_all_introns.bed.gz
 
-#Format:python splice_annotator_got.py <path to datafiles> <input datafile> <junction tag .bed file> <output main file name>
-python "$junc_ann_scripts_dir"/bin/junc_annotator.py "$output_location"/leafcutter_outputs/"$patient_run"_output "$patient_run"_all.introns.info.txt "$output_location"/leafcutter_outputs/"$patient_run"_output/leafviz_all_introns.bed "$patient_run"_all.introns.info.w.primary.annotations.txt                                                                                                                                                                                                          
-##### ----------------------- Strand adjust the primary annotations  ----------------------- #####
+#clean the intron.bed file for exon skipping
+python "$run_files"/intron_bed_cleaner.py "$output_location"/leafviz_all_introns.bed "$output_location"/leafviz_all_introns_cleaned.bed
 
+#Format:python splice_annotator_got.py <path to datafiles> <input datafile> <junction tag .bed file> <output main file name>
+python "$run_files"/new_annotator_with_skipping.py "$output_location" "$patient_run"_all.introns.info.txt "$output_location"/leafviz_all_introns.bed "$output_location"/leafviz_all_introns_cleaned.bed ONT "$patient_run"_all.introns.info.w.primaryAnnotations.exonSkipping.txt
+#Format:python splice_annotator_got.py <path to datafiles> <input datafile> <junction tag .bed file> <output main file name>
+#python "$run_files"/ "$output_location"/leafcutter_outputs/"$patient_run"_output "$patient_run"_all.introns.info.txt "$output_location"/leafcutter_outputs/"$patient_run"_output/leafviz_all_introns.bed "$patient_run"_all.introns.info.w.primary.annotations.txt                                                                                                                                  
  

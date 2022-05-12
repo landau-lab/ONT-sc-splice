@@ -18,8 +18,6 @@ pattern=$6
 sample_name=$7
 nperm=$8
 
-diff_usage_scripts_dir=$run_dir/diff_transcript_usage
-
 
 ###############################################################
 ######## Step 1: Run Strand Adjustment of Metadata ############
@@ -34,7 +32,7 @@ diff_usage_scripts_dir=$run_dir/diff_transcript_usage
 cd $workdir 
 mkdir strand_adjusted_metadata
 
-Rscript "$diff_usage_scripts_dir"/bin/strand_adjustment.R $metadata "$workdir"/strand_adjusted_metadata
+Rscript "$run_files"/bin/strand_adjustment.R $metadata "$workdir"/strand_adjusted_metadata
 
 ##############################################################
 ######### Step 2: Split clusters for differential transcript usage
@@ -65,7 +63,7 @@ mkdir split_"$i"/five_prime/counts_files
 mkdir split_"$i"/five_prime/data_tables
 done
 
-Rscript "$diff_usage_scripts_dir"/bin/split_clusters.R $counts $genotype "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv $pattern "$workdir"/diff_transcript_output/split_cluster_files
+Rscript "$run_files"/bin/split_clusters_v2.R $counts $genotype "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv $pattern "$workdir"/diff_transcript_output/split_cluster_files
 
 ###########################################################
 ######## Step 3: Batch submit each split cluster for differential analysis
@@ -88,7 +86,7 @@ mkdir logs
 
 permute_jobids=()
 for i in {1..1000}; do
-permute_jobids+=($(sbatch --job-name="$sample_name" "$diff_usage_scripts_dir"/bin/run_split_perm_within_celltype_5p_3p.sh "$workdir"/diff_transcript_output/split_cluster_files/split_"$i" $genotype $nperm $pattern "$workdir"/diff_transcript_output/split_cluster_output output_"$i" "$diff_usage_scripts_dir"/bin))
+permute_jobids+=($(sbatch --job-name="$sample_name" "$run_files"/bin/run_split_perm_within_celltype_5p_3p.sh "$workdir"/diff_transcript_output/split_cluster_files/split_"$i" $genotype $nperm $pattern "$workdir"/diff_transcript_output/split_cluster_output output_"$i" "$run_files"/bin))
 done 
 
 ###########################################################
@@ -100,9 +98,9 @@ done
 
 mkdir merge_final_output
 
-#sbatch "$diff_usage_scripts_dir"/bin/run_merge_output.sh "$diff_usage_scripts_dir"/bin "$workdir"/diff_transcript_output/split_cluster_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv "$workdir"/diff_transcript_output/merge_final_output
+#sbatch "$run_files"/bin/run_merge_output.sh "$run_files"/bin "$workdir"/diff_transcript_output/split_cluster_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv "$workdir"/diff_transcript_output/merge_final_output
 
-merge=($(sbatch --dependency=singleton --job-name="$sample_name" "$diff_usage_scripts_dir"/bin/run_merge_output.sh "$run_files"/bin "$workdir"/diff_transcript_output/split_cluster_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv "$workdir"/diff_transcript_output/merge_final_output))
+merge=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/bin/run_merge_output.sh "$run_files"/bin "$workdir"/diff_transcript_output/split_cluster_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv "$workdir"/diff_transcript_output/merge_final_output))
 
 ##########################################################
 ####### Step 5: Run DTU for all cell types 
@@ -124,7 +122,7 @@ mkdir split_cluster_celltype_output/alt_five_prime
 
 permute_celltypes_jobids=()
 for i in {1..1000}; do
-permute_celltypes_jobids+=($(sbatch --job-name="$sample_name" "$diff_usage_scripts_dir"/bin/submit_split_celltype.sh "$workdir"/diff_transcript_output/split_cluster_files/split_"$i" $genotype $nperm $pattern "$workdir"/diff_transcript_output/split_cluster_celltype_output output_"$i" "$diff_usage_scripts_dir"/bin))
+permute_celltypes_jobids+=($(sbatch --job-name="$sample_name" "$run_files"/bin/submit_split_celltype.sh "$workdir"/diff_transcript_output/split_cluster_files/split_"$i" $genotype $nperm $pattern "$workdir"/diff_transcript_output/split_cluster_celltype_output output_"$i" "$run_files"/bin))
 done
 
 ##########################################################
@@ -137,7 +135,7 @@ done
 
 mkdir merge_final_celltype_output
 
-merge_celltype=($(sbatch --dependency=singleton --job-name="$sample_name" "$diff_usage_scripts_dir"/bin/run_merge_celltype_output.sh "$diff_usage_scripts_dir"/bin "$workdir"/diff_transcript_output/split_cluster_celltype_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv $genotype "$workdir"/diff_transcript_output/merge_final_celltype_output))
+merge_celltype=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/bin/run_merge_celltype_output.sh "$run_files"/bin "$workdir"/diff_transcript_output/split_cluster_celltype_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv $genotype "$workdir"/diff_transcript_output/merge_final_celltype_output))
 
 echo "Done" 
 
