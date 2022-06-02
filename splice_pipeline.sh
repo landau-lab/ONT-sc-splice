@@ -436,10 +436,10 @@ cd $output_dir
 #sbatch --job-name="$sample_name" "$run_files"/leafcutter_scripts/junc_calling_pipeline.sh "$output_dir"/output_files "$output_dir"/output_files/sicelore_outputs/"$sample_name"_consensus.sorted.tags.GE.bam $sample_name "$run_files"/bin
 
 junc_calling=($(sbatch --dependency=singleton --job-name="$sample_name" "$scripts_dir"/junction_annotation/junc_calling_pipeline.w.exon.skip.sh \
-  "$output_dir"/output_files \
-  "$sicelore_outputs"/"$sample_name"_consensus.sorted.tags.GE.bam \
-  $sample_name \
-  "$scripts_dir"/bin))
+  --output_location "$output_dir"/output_files \
+  --input_bam "$sicelore_outputs"/"$sample_name"_consensus.sorted.tags.GE.bam \
+  --sample $sample_name \
+  --scripts_dir "$scripts_dir"/junction_annotation))
 
 ############## Diff Transcript Usage ####################################################
 
