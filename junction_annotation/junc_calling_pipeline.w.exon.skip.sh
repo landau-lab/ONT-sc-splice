@@ -7,31 +7,52 @@
 
 ##Pipeline to go from ONT Bam file (from SiCeLoRe output) --> junction:cell annotated matrix
 
-##Format: bash junc_calling_pipeline.sh path/to/main_output_folder patient_run_name path/to/run_files
+##Format: bash junc_calling_pipeline.sh path/to/main_output_folder sample_name path/to/run_files
 ##Example: sbatch junc_calling_pipeline.sh /gpfs/commons/groups/landau_lab/SF3B1_splice_project/6.Junction_analysis_files/2.ONT_juncs CH259 run_files 
 
-##Input varibles:
-output_location=$1
-input_bam=$2
-patient_run=$3
-run_files=$4
+# output_location
+# input_bam 
+# sample 
+# scripts_dir
+# make_refs
+# refs_dir
+# leafcutter_dir 
+# gtf
 
-#mkdir "$output_location"/"$patient_run"_output
+# set defaults 
+scripts_dir="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/ONT_Splice_Pipeline/junction_annotation"
+make_refs=false 
+refs_dir="$scripts_dir"/annotation_reference
+leafcutter_dir="/gpfs/commons/home/gmullokandov/software/leafcutter"
+gtf="$refs_dir"/gencode.v31.basic.annotation.gtf
+
+# grab arguments from command line
+while [ $# -gt 0 ]; do
+    if [[ $1 == *'--'* ]]; then
+        v="${1/--/}"
+        declare $v="$2"
+    fi
+    shift
+done
+
+module load python/3.5.1
 
 ##### ----------------------- Generate Intron/3p/5p databases from GTF file (only need to do this once)  ----------------------- #####
 
-#mkdir "$run_files"/annotation_reference
+# if make_refs set to true then 
+if [[ make_refs ]]; then
 
-#Format: path/to/leafcutter/leafviz/gtf2leafcutter.pl -o path/to/output_files/prefix path/to/reference_gtf
+    mkdir $output_refs
 
-#/gpfs/commons/home/gmullokandov/software/leafcutter/leafviz/gtf2leafcutter.pl -o "$run_files"/annotation_reference/leafviz "$run_files"/gencode.v31.basic.annotation.gtf
+    $leafcutter_dir/leafviz/gtf2leafcutter.pl \
+      -o "$refs_dir"/leafviz \
+      $gtf
 
-annotation_code=""$run_files"/annotation_reference/leafviz"
+fi
 
+annotation_code=$refs_dir/leafviz
 
 ##### ----------------------- Run the python junction calling script ----------------------- #####
-
-module load python/3.5.1
 
 #Format: python script_to_run path/to/input/bam path_to_output_file
 echo "starting junction calling" 
@@ -40,7 +61,9 @@ cd $output_location
 mkdir leafcutter_outputs
 cd ./leafcutter_outputs
 
-python "$run_files"/count_introns_ONT.py $input_bam "$patient_run"_counts_sc_txt.gz
+python "$scripts_dir"/bin/count_introns_ONT.py \
+  $input_bam \
+  "$sample"_counts_sc_txt.gz
 echo "junction calling done" 
 
 ##### ----------------------- Run the pre-processing scripts ----------------------- #####
@@ -50,26 +73,34 @@ echo "Running pre-processing scripts"
 module load anaconda3
 source /nfs/sw/anaconda3/anaconda3-10.19/etc/profile.d/conda.sh
 conda activate /gpfs/commons/home/pchamely/.conda/envs/RenvForKnowlesPCA
-mkdir "$patient_run"_output
+mkdir "$sample"_output
 
 #Format: Rscript junc_calling_script.R path/to/*_counts_sc_txt.gz path/to/output_folder patient_ID path/to/annotation_code/prefix"
 
-Rscript "$run_files"/junc_calling_script.R "$patient_run"_counts_sc_txt.gz "$patient_run"_output "$patient_run" "$annotation_code"
+Rscript "$scripts_dir"/bin/junc_calling_script.R \
+  "$sample"_counts_sc_txt.gz \
+  "$sample"_output \
+  "$sample" \
+  "$annotation_code"
 
 echo "Done" 
 
-##### ----------------------- Run Lloyd's annotation script  ----------------------- #####
+##### ----------------------- Run annotation script  ----------------------- #####
 conda deactivate
 export PATH="/gpfs/commons/home/lkluegel/miniconda3/bin:$PATH"
 
-scp "$run_files"/annotation_reference/leafviz_all_introns.bed.gz "$patient_run"_output/
-gunzip "$output_location"/leafcutter_outputs/"$patient_run"_output/leafviz_all_introns.bed.gz
+scp "$refs_dir"/leafviz_all_introns.bed.gz "$sample"_output/
+gunzip "$output_location"/leafcutter_outputs/"$sample"_output/leafviz_all_introns.bed.gz
 
 #clean the intron.bed file for exon skipping
-python "$run_files"/intron_bed_cleaner.py "$output_location"/leafviz_all_introns.bed "$output_location"/leafviz_all_introns_cleaned.bed
+python "$scripts_dir"/bin/intron_bed_cleaner.py \
+  "$output_location"/leafviz_all_introns.bed \
+  "$output_location"/leafviz_all_introns_cleaned.bed
 
-#Format:python splice_annotator_got.py <path to datafiles> <input datafile> <junction tag .bed file> <output main file name>
-python "$run_files"/new_annotator_with_skipping.py "$output_location" "$patient_run"_all.introns.info.txt "$output_location"/leafviz_all_introns.bed "$output_location"/leafviz_all_introns_cleaned.bed ONT "$patient_run"_all.introns.info.w.primaryAnnotations.exonSkipping.txt
-#Format:python splice_annotator_got.py <path to datafiles> <input datafile> <junction tag .bed file> <output main file name>
-#python "$run_files"/ "$output_location"/leafcutter_outputs/"$patient_run"_output "$patient_run"_all.introns.info.txt "$output_location"/leafcutter_outputs/"$patient_run"_output/leafviz_all_introns.bed "$patient_run"_all.introns.info.w.primary.annotations.txt                                                                                                                                  
- 
+# run annotation script with exon skipping
+python "$scripts_dir"/bin/new_annotator_with_skipping.py \
+  "$output_location" \
+  "$sample"_all.introns.info.txt \
+  "$output_location"/leafviz_all_introns.bed \
+  "$output_location"/leafviz_all_introns_cleaned.bed ONT \
+  "$sample"_all.introns.info.w.primaryAnnotations.exonSkipping.txt
