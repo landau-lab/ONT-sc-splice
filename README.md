@@ -1,9 +1,27 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Single Cell Splicing Analysis of ONT Reads](#single-cell-splicing-analysis-of-ont-reads)
+  - [Requirements](#requirements)
+  - [Reference files and general setup](#reference-files-and-general-setup)
+  - [GoT-Splice Pipeline overview](#got-splice-pipeline-overview)
+    - [Junction Calling in Single Cells](#junction-calling-in-single-cells)
+    - [Annotation of Intron Junctions](#annotation-of-intron-junctions)
+    - [Differential Transcript Usage](#differential-transcript-usage)
+      - [Option A: Individual Patient](#option-a-individual-patient)
+      - [Option B: Combine Samples](#option-b-combine-samples)
+      - [Option C: Within Cell Types/ Clusters](#option-c-within-cell-types-clusters)
+  - [Running the full GoT-Splice pipeline](#running-the-full-got-splice-pipeline)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 
 # Single Cell Splicing Analysis of ONT Reads
 
-These tools allow for identification of differentially spliced transcripts in single cells from long read data. Full length cDNA produced from the 10X 3' single cell RNA sequencing kit is sequenced using oxford nanopore technologies (ONT) to get reads corresponding to full length transcripts. Prior to use of this pipeline, reads are aligned and cell barcodes and UMI's are identified in each read using the previously published pipeline (SiCeLoRe - https://www.nature.com/articles/s41467-020-17800-6). A tagged bam file containing tags for cell barcodes and UMI are then processed using a similar method to leafcutter (https://davidaknowles.github.io/leafcutter/) to call intron junctions found in each cell. Intron junctions are annotated as either alternative 3' or alternative 5' prior to differential transcript usage. 
+These tools allow for identification of differentially spliced transcripts in single cells from long read data. Full length cDNA produced from the 10X 3' single cell RNA sequencing kit is sequenced using oxford nanopore technologies (ONT) to get reads corresponding to full length transcripts. Prior to use of this pipeline, reads are aligned and cell barcodes and UMI's are identified in each read using the previously published pipeline [SiCeLoRe](https://www.nature.com/articles/s41467-020-17800-6). A tagged bam file containing tags for cell barcodes and UMI are then processed using a similar method to [leafcutter](https://davidaknowles.github.io/leafcutter/) to call intron junctions found in each cell. Intron junctions are annotated as either alternative 3' or alternative 5' prior to differential transcript usage. 
 
-Additionally, genotype status of mutation of interest (in this case SF3B1 in patients with myeloid displastic syndrome) was determined using the previously published method GoT (https://www.nature.com/articles/s41586-019-1367-0). Differential transcript usage can then be determined within each sample, comparing mutant and wild type cells, and can be further broken down by cell type. We also allow here an option to integrate across multiple single cell samples.
+Additionally, genotype status of mutation of interest (in this case SF3B1 in patients with myeloid displastic syndrome) was determined using the previously published method, [GoT](https://www.nature.com/articles/s41586-019-1367-0). Differential transcript usage can then be determined within each sample, comparing mutant and wild type cells, and can be further broken down by cell type. We also allow here an option to integrate across multiple single cell samples.
 
 ## Requirements 
 - [SiCeLoRe](https://github.com/ucagenomix/sicelore)
@@ -81,6 +99,7 @@ python new_annotator_with_skipping.py \
 ```
 
 To run the junction annotation pipeline alltogether run the following: 
+
 :warning: This is a shell script that is set up to run in a slurm environment with queues named `bigmem` and `pe2`. 
 Note that you will need up to 200 GB of memory to run this pipeline and the front matter of the shell script should be adjusted for your slurm environment.
 
@@ -108,6 +127,7 @@ sbatch junction_annotation/junc_calling_pipeline.w.exon.skip.sh \
   --refs_dir <path to directory to output the reference files> \
   --leafcutter_dir <path to leafcutter> \
   --gtf <path to input gtf file> 
+```
 
 ### Differential Transcript Usage
 
