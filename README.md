@@ -9,7 +9,7 @@ Additionally, genotype status of mutation of interest (in this case SF3B1 in pat
 - [SiCeLoRe](https://github.com/ucagenomix/sicelore)
 - [minimap2](https://github.com/lh3/minimap2)
 - [samtools](http://www.htslib.org/)
-- [racon]
+- [racon](https://github.com/isovic/racon)
 - Java 1.9 or higher
 
 ## Reference files and general setup
