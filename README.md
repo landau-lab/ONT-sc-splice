@@ -34,47 +34,80 @@ A genotyping table containing the following columns is required:
 
 ## GoT-Splice Pipeline overview 
 
-The GoT-Splice pipeline is set up has three large steps, CB/UMI calling in long reads using SiCeLoRe, junction calling, and differential transcript usage. 
-Currently, junction calling and differential transcript usage are two separate workflows that can be run independently, or they can be run as one larger pipeline within the GoT-splice workflow where SiCeLoRe is performed first prior to intron junction and differential transcript usage. 
+The GoT-Splice pipeline has three large steps, CB/UMI calling in long reads using SiCeLoRe, junction calling, and differential transcript usage. 
+Currently, junction calling and differential transcript usage are two separate workflows that can be run independently, or they can be run as one larger pipeline within the GoT-splice workflow where SiCeLoRe is performed first prior to  junction calling and differential transcript usage. 
 
-We recommend first running SiCeLoRe following the user instructions. After which intron junction and then differential transcript usage can be performed. 
+To run the entire pipeline as is, see the below section on [Running the full GoT Splice pipeline.](#running-the-full-got-splice-pipeline)
+However, the current pipeline is set up to use a computing environment that uses slurm and requires altering the queue names. 
+For all other computing environments, we recommend first running [SiCeLoRe following their user guidelines](https://github.com/ucagenomix/sicelore). 
+After which the output from SiCeLoRe can be used as input to junction calling and then differential transcript usage.
 
 ### Junction Calling in Single Cells
 
 Junction calling is modelled after methods described in leafcutter, originally developed for identifying junctions in short read RNA-sequencing data. 
+All scripts needed for junction calling can be found in [`junction_annotation/bin`](./junction_annotation/bin/).
 
-Step 1: Before calling junctions on your own sample, you must generate your own annotation reference files. This can be done on your own by using the function `gtf2leafcutter.pl()` from [leafcutter](). Or you may use our annotation references found in the [`junction_annotation/annotation_reference`](./junction_annotation/annotation_reference/) folder generated using Hg38. 
+1. Before calling junctions on your own sample, you must generate your own annotation reference files. 
+This can be done on your own by using the function `gtf2leafcutter.pl()` from [leafcutter](https://davidaknowles.github.io/leafcutter/index.html). 
+Or you may use our annotation references found in the [`junction_annotation/annotation_reference`](./junction_annotation/annotation_reference/) folder generated using Hg38. 
 
-Step 2: Count intron junctions. Input bam must be bam file with cell barcode tags (BC) and UMI tags (U8) 
+2. Count junctions. Input bam must be bam file with cell barcode tags (BC) and UMI tags (U8) 
 ```
 python count_introns_ONT.py \
-  <path/to/input/bam> \
-  <path_to_output_file>
+  <path to bam output from SiCeLoRe> \
+  <path to output file>
 ```
-Step 3: Creating metadata table and adding junction information to counts matrix. This step also includes the assigning of cluster IDs. A Cluster ID is an ID that is unique to all junctions that have the same 5p or the same 3p end. Junctions within the same cluster represent a group of junctions that have been alternatively spliced. 
+3. Creating metadata table and adding junction information to counts matrix. This step also includes the assigning of cluster IDs. A Cluster ID is an ID that is unique to all junctions that have the same 5p or the same 3p end. Junctions within the same cluster represent a group of junctions that have been alternatively spliced. 
 ```
 Rscript junc_calling_script.R \
-  <path/to/output_folder> \
+  <path to output folder> \
   <sample_ID> \
-  <path/to/annotation_reference>
+  <path to annotation_reference>
 ```
 Final ouptput: Counts matrix with each row as a junction and each column as a cell, metadata containing junction information, including gene, transcript ID, and chromosomal location. 
 
-### Annotation of Intron Junctions**
+### Annotation of Intron Junctions
 
-Annotation of intron junctions identified in sample. Here uses the reference gtf to classify each 5' and 3' end of the intron. Output will add on additional columns to the metadata table including startClass and endClass, classifying the junction ends as the canonical (main) or alternative (not_main_3_prime/not_main_5_prime) end. 
+Annotation of intron junctions identified in sample. 
+Here the reference gtf is used to classify each 5' and 3' end of the intron. 
+Output will add on additional columns to the metadata table including startClass and endClass, classifying the junction ends as the canonical (main) or alternative (not_main_3_prime/not_main_5_prime) end. 
+Events will also be classified as exon skipping events or alternative splicing events. 
 ```
-python new.annotator_v2.py \
-  <path/to/junction/calling/outputs> \
+python new_annotator_with_skipping.py \
+  <path to junction calling outputs> \
   <input datafile (output from previous step)> \
   <bed file output from intron junction calling> \
   <output file name> 
 ```
 
-To run the junction annotation pipeline run the following: 
+To run the junction annotation pipeline alltogether run the following: 
+:warning: This is a shell script that is set up to run in a slurm environment with queues named `bigmem` and `pe2`. 
+Note that you will need up to 200 GB of memory to run this pipeline and the front matter of the shell script should be adjusted for your slurm environment.
 
 ```
+sbatch junction_annotation/junc_calling_pipeline.w.exon.skip.sh \
+  --output_location <path to junction calling outputs> \
+  --input_bam <path to bam output from SiCeLoRe> \
+  --sample <sample_ID> \
+  --scripts_dir <path to junction annotation folder in GoT splice repo>
+
 ```
+
+By default the junction annotation will run without creating new annotation files. 
+If you would like to run it with creating new annotation files you can run it using the `--make_refs true` option. 
+You will also need to provide a directory to store the annotation files and a gtf file from which to create the annotation files. 
+You will also need to have [leafcutter](https://davidaknowles.github.io/leafcutter/index.html) downloaded and provide the path to the leafcutter directory.
+
+```
+sbatch junction_annotation/junc_calling_pipeline.w.exon.skip.sh \
+  --output_location <path to junction calling outputs> \
+  --input_bam <path to bam output from SiCeLoRe> \
+  --sample <sample_ID> \
+  --scripts_dir <path to junction annotation folder in GoT splice repo> \
+  --make_refs true \
+  --refs_dir <path to directory to output the reference files> \
+  --leafcutter_dir <path to leafcutter> \
+  --gtf <path to input gtf file> 
 
 ### Differential Transcript Usage
 
