@@ -16,4 +16,10 @@ runfiles=$7
 
 echo $outputdir
 
-Rscript "$runfiles"/split_JuncPermute_LogOR_perm_within_celltype_5p_3p.r $splitdir $genotype $nperm $pattern $outputdir $outputfile
+Rscript "$runfiles"/split_JuncPermute_LogOR_perm_within_celltype_5p_3p.r \
+  --split $splitdir \
+  --genotype_file $genotype \
+  --num_perm $nperm \
+  --patern $pattern \
+  --output_dir $outputdir \
+  --output_file $outputfile

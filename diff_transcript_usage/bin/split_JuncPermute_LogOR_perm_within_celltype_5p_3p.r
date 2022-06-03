@@ -1,12 +1,51 @@
 library(tidyverse)
+library(optparse)
 
-args = commandArgs(TRUE)
-path.to.split = args[1]
-path.to.genotype = args[2]
-nperm = args[3]
-pattern=args[4]
-output.dir = args[5]
-output.file = args[6]
+# Set up optparse options
+option_list <- list(
+  make_option(
+    opt_str = c("-s", "--split"),
+    type = "character",
+    help = "path to folder with split counts matrix"
+  ),
+  make_option(
+    opt_str = c("-g", "--genotype_file"),
+    type = "character",
+    help = "path to genotype tsv"
+  ),
+  make_option(
+    opt_str = c("-n", "--num_perm"),
+    type = "integer",
+    default - 100000,
+    help = "Number of permutations to perform"
+  ),
+  make_option(
+    opt_str = c("-p", "--pattern"),
+    type = "character",
+    help = "pattern used to identify cells in integrated data (ie. _1, _2)"
+  ),
+  make_option(
+    opt_str = c("-f", "--output_file"),
+    type = "character",
+    help = "output file name"
+  ),
+  make_option(
+    opt_str = c("-o", "--output_dir"),
+    type = "character",
+    help = "path to output directory"
+  )
+)
+
+# Parse options
+opt <- parse_args(OptionParser(option_list = option_list))
+
+
+path.to.split = opt$split
+path.to.genotype = opt$genotype_file
+nperm = opt$num_perm
+pattern=opt$pattern
+output.dir = opt$output_file
+output.file = opt$output_dir 
 
 nperm = as.numeric(nperm)
 

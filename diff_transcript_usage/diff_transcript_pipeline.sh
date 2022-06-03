@@ -113,7 +113,8 @@ permute_jobids+=($(sbatch --job-name="$sample_name" "$scripts_dir"/bin/run_split
   $genotype \
   $nperm \
   $pattern \
-  "$output_dir"/diff_transcript_output/split_cluster_output output_"$i" \
+  "$output_dir"/diff_transcript_output/split_cluster_output \
+  output_"$i" \
   "$scripts_dir"/bin))
 done 
 

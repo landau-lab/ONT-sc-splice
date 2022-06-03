@@ -4,14 +4,58 @@ library(parallel)
 library(tidyverse)
 library(matrixStats)
 library(data.table)
+library(optparse)
 
-args = commandArgs(TRUE)
-path.to.matrix = args[1]
-path.to.genotype = args[2]
-path.to.metadata = args[3]
-output.dir = args[4]
-patient.names = args[5]
-pattern = args[6]
+# Set up optparse options
+option_list <- list(
+  make_option(
+    opt_str = c("-c", "--counts"),
+    type = "character",
+    help = "path to counts matrix"
+  ),
+  make_option(
+    opt_str = c("-g", "--genotype_file"),
+    type = "character",
+    help = "path to genotype tsv"
+  ),
+  make_option(
+    opt_str = c("-d", "--metadata"),
+    type = "character",
+    help = "path to metadata tsv"
+  ),
+  make_option(
+    opt_str = c("-p", "--pattern"),
+    type = "character",
+    help = "pattern used to identify cells in integrated data (ie. _1, _2)"
+  ),
+  make_option(
+    opt_str = c("-r", "--min_reads"),
+    type = "double",
+    default = 5,
+    help = "number of minimum reads for splice junction to cover"
+  ),
+  make_option(
+    opt_str = c("-s", "--sample_names"),
+    type = "character",
+    help = "Comma separated character string of patient/sample names"
+  ),
+  make_option(
+    opt_str = c("-o", "--output_dir"),
+    type = "character",
+    help = "path to output directory"
+  )
+)
+
+# Parse options
+opt <- parse_args(OptionParser(option_list = option_list))
+
+path.to.matrix = opt$counts
+path.to.genotype = opt$genotype_file
+path.to.metadata = opt$metadata
+output.dir = opt$output_dir
+patient.names = opt$sample_names
+pattern = opt$pattern
+min_reads = opt$min_reads
 
 
 # Test data
@@ -128,7 +172,7 @@ data.comb.counts = data.comb %>% group_by(intron_junction) %>% summarise(obs.wt 
 data.comb = data.comb %>% select( -obs.wt, -obs.mut, -total.reads.per.junction, -patient)
 data.comb = distinct(data.comb)
 data.comb = left_join(data.comb, data.comb.counts)
-data.comb = data.comb[which(data.comb$total.reads.per.junction >= 5),]
+data.comb = data.comb[which(data.comb$total.reads.per.junction >= min_reads),]
 dim(data.comb)
 
 comb.metadata = distinct(Reduce(full_join, metadata.list) %>% select(intron_junction, startClass, endClass))

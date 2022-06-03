@@ -15,6 +15,7 @@ pattern=$3
 patients=$4
 nperm=$5
 sample_name=$6
+min_reads=5
 
 
 counts="$workdir"/1.Counts_matrix
@@ -42,7 +43,10 @@ mkdir diff_transcript_combined_merge_counts
 cd ./diff_transcript_combined_merge_counts
 mkdir combined_metadata
 
-Rscript "$diff_usage_scripts_dir"/bin/create_combined_metadata.R $metadata "$workdir"/diff_transcript_combined_merge_counts/combined_metadata $patients
+Rscript "$diff_usage_scripts_dir"/bin/create_combined_metadata.R \
+  $metadata \
+  "$workdir"/diff_transcript_combined_merge_counts/combined_metadata \
+  $patients
 
 
 ##############################################################
@@ -71,7 +75,14 @@ mkdir split_"$i"/five_prime/counts_files
 mkdir split_"$i"/five_prime/data_tables
 done
 
-Rscript "$diff_usage_scripts_dir"/bin/split_clusters_comb_patient_merge_counts_1WT.R $counts $genotype $metadata "$workdir"/diff_transcript_combined_merge_counts/split_cluster_files $patients $pattern
+Rscript "$diff_usage_scripts_dir"/bin/split_clusters_comb_patient_merge_counts_1WT.R \
+  --counts $counts \
+  --genotype_file $genotype \
+  --metadata $metadata \
+  --output_dir "$workdir"/diff_transcript_combined_merge_counts/split_cluster_files \
+  --sample_names $patients \
+  --min_reads $min_reads
+  --pattern $pattern
 
 ###########################################################
 ######## Step 3: Batch submit each split cluster for differential analysis

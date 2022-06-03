@@ -43,7 +43,6 @@ option_list <- list(
 # Parse options
 opt <- parse_args(OptionParser(option_list = option_list))
 
-args = commandArgs(TRUE)
 path.to.matrix = opt$counts
 path.to.genotype = opt$genotype_file
 path.to.metadata = opt$metadata
