@@ -131,59 +131,154 @@ sbatch junction_annotation/junc_calling_pipeline.w.exon.skip.sh \
 
 ### Differential Transcript Usage
 
-Strand adjustment of metadata file. Adds in columns to assign start/end as five prime or three prime ends of the gene for annotations. Output is metadata with new columns fivep_class and threep_class. 
+All scripts needed for differential transcript usage can be found in [`diff_transcript_usage/bin`](./diff_transcript_usage/bin/).
+
+1. Strand adjustment of metadata file. 
+Adds in columns to assign start/end as five prime or three prime ends of the gene for annotations. 
+The output is an uypdated metadata file with new columns added, `fivep_class` and `threep_class`. 
+
 ```
-Rscript strand_adjustment.R <metadata> <path/to/output>
+Rscript strand_adjustment.R \
+  <metadata> \
+  <path/to/output>
 ```
+
 #### Option A: Individual Patient
 
-Run Differential transcript usage analysis. This requires the strand adjusted metadata matrix, full counts matrix from intron junction calling, and a table with cell barcodes, genotype information, and cell type assignment (produced from short read data analysis using GoT). From these inputs, junctions with no alternative sites and low coverage (n<5 - this threshold will be able to be altered by the user in a future version) will be filtered out prior to calculating an odds ratio for each junction in comparison to all other junctions with the same three prime or five prime end. Genotype assignments are then permuted x number of times (we recommend doing a test with 100-1000 but using at least 100,000 for making any final conclusions) and odds ratios are recalculated before determining the likelihood of the observed odds ratio being statistically significant. A final table for both Alt_5P and Alt_3P is output along with the log(odds ratio) for each junction and total observed reads across mutant and wild type cells. 
-
-Format: Rscript Junc_Permute_logOR_alt3p_alt5p_within_cell_type.R <counts matrix> <genotype information> <strand adjusted metadata> <pattern/sample ID added to cell barcodes> <number of permutations> <path/to/output>
+2. Run Differential transcript usage analysis. 
+This requires the strand adjusted metadata matrix, full counts matrix from intron junction calling, and a table with cell barcodes, genotype information, and cell type assignment (produced from short read data analysis using GoT). 
+By default, junctions with no alternative sites and less than 5 total reads will be filtered out prior to calculating an odds ratio for each junction in comparison to all other junctions with the same three prime or five prime end. 
+To adjust the minimum reads, use the `--min_reads` argument. 
+Genotype assignments are then permuted x number of times (we recommend doing a test with 100-1000 but using at least 100,000 for making any final conclusions) and odds ratios are recalculated before determining the likelihood of the observed odds ratio being statistically significant. 
+Number of permutations are dictated by the `nperm` argument.
+A final table for both `Alt_5P` and `Alt_3P` is output along with the `log(odds ratio)` for each junction and total observed reads across mutant and wild type cells. 
   
-With a high number of junctions, it is likely that this may take a long time. If that is the case, we recommend splitting by cluster ID and then running for each group of smaller clusters a modified version that we have provided. See example below along with an example of how to run and submit on a slurm cluster in the examples folder. 
+With a high number of junctions, it is likely that this may take a long time to run all clusters at once. 
+We recommend splitting by cluster ID and then running for each group of smaller clusters a modified version that we have provided. 
+See example below along with an example of how to run and submit on a slurm cluster in the examples folder. 
 
 ```
-Rscript split_clusters_v2.R <counts> <genotype> <strand adjusted metadata> <pattern/ sample ID added to cell barcodes> <path/to/output>
+Rscript split_clusters_v2.R \
+  --counts <counts> \
+  --genotype_file <genotype> \
+  --metadata <strand adjusted metadata> \
+  --pattern <pattern/ sample ID added to cell barcodes> \
+  --output_dir <path/to/output>
 
-Rscript split_JuncPermute_LogOR_perm_within_celltype_5p_3p.r <path/to/split/files> <genotype> <number of permtuations> <pattern> <output directory> <output file name> 
+Rscript split_JuncPermute_LogOR_perm_within_celltype_5p_3p.r \
+  --split <path to split files> \
+  --genotype_file <genotype> \
+  --num_perm <number of permtuations> \
+  --pattern <pattern> \
+  --output_dir <output directory> \
+  --output_file <output file name> 
   
-Rscript merge_final_output_ind_patient.R <path/to/split/output> <path/to/metadata> <path/to/output>
+Rscript merge_final_output_ind_patient.R \
+  <path to split 0utput> \
+  <path to metadata> \
+  <path to output>
 
 ```
+
+**Note:** To run the full differential transcript usage workflow on a slurm cluster, use the following: 
+
+```
+sbatch diff_transcript_pipeline.sh \
+  --output_dir <path to output dir> \
+  --scripts_dir <path to junction annotation folder in GoT splice repo> \
+  --metadata <path to metadata (output from junction annotation)> \
+  --counts <path to counts matrix> \
+  --genotype_info <path to genotype file> \
+  --pattern <pattern> \
+  --sample_name <sample name> \
+  --nperm 100000 \
+  --min_reads 5
+
+```
+
 #### Option B: Combine Samples
 
-If you have multiple samples that you would like to compare and look for differential transcript usage across all samples, we have also implemented a way to integrate the same analysis described above across our samples. Here, we ony keep clusters that are found in all samples and again only junctions that have n > 5 reads (this threshold will be able to be altered by the user in a future version). The output includes the individual odds ratio for each sample for each junction as well as a weighted odds ratio based on total cells found in each sample. There will be one p-value reported for each junction corresponding to the significance that this junction is differentially used across all samples. There is no minimum or maximum number of samples needed. Here you will need to move all files for all patients into one folder - i.e. all counts matrices should be in one folder and all genotype information should be in another folder. Again, to increase speed, we suggest that we split across clusters so have provided the scripts to do so. 
+If you have multiple samples that you would like to compare and look for differential transcript usage across all samples, we have also implemented a way to integrate the same analysis described above across our samples. Here, we ony keep clusters that are found in all samples and again only junctions that have n > 5 reads by default. 
+The output includes the individual odds ratio for each sample for each junction as well as a weighted odds ratio based on total cells found in each sample. 
+There will be one p-value reported for each junction corresponding to the significance that this junction is differentially used across all samples. 
+There is no minimum or maximum number of samples needed.
+Here you will need to move all files for all patients into one folder - i.e. all counts matrices should be in one folder and all genotype information should be in another folder. 
+Again, to increase speed, we suggest that we split across clusters so have provided the scripts to do so. 
 
 ```
-Rscript create_combined_metadata.R <path/to/metadata> <path/to/output> <patient.names> 
+Rscript create_combined_metadata.R \
+  <path to metadata> \
+  <path to output> \
+  <sample names> 
 
-Rscript split_clusters_combined_patient.R <path/to/folder/with/counts> <path/to/folder/with/genotype> <path/to/combined/metadata> <path/to/output> <patient.names> <pattern/unique identifiers on cell barcodes>
+Rscript split_clusters_comb_patient_merge_counts_1WT.R \
+  --counts <path to folder with counts> \
+  --genotype_file <path to folder with genotype> \
+  --metadata <path to combined metadata> \
+  --output_dir <path to output> \
+  --sample_names <sample names> \
+  --pattern <pattern/unique identifiers on cell barcodes> \
+  --min_reads 5 
 
-Rscript split_JuncPermute_LogOR_combined_patient_within_celltype.R <path/to/split/files> <path/to/genotype> <number of permutations> <path/to/output> <output file name>
+Rscript split_JuncPermute_LogOR_combined_patient_within_celltype.R \
+  <path to split files> \
+  <path to genotype> \
+  <number of permutations> \
+  <path to output> \
+  <output file name>
   
-Rscript merge_final_output_comb_patient.R <path/to/outputs> <path/to/metadata> <patient.names> <path/to/output>
+Rscript merge_final_output_comb_patient.R \
+  <path to outputs> \
+  <path to metadata> \
+  <sample names> \
+  <path to output>
 ```
 
 #### Option C: Within Cell Types/ Clusters
 
-Finally, using information defined from short read illumina sequencing, you can identify differentially used transcripts across cell types. Here, we integrate across samples and across cell types in order to identify key transcripts that are differentially spliced between mutant and wild type cells in various cell types. Permutations happen within each sample and within each cell type. The output table contains a combined table with weighted odds ratio for each junction found in each cell type with one p-value being reported for the likelihood that junction is significantly differentially used in each cell type. This can also be applied to clusters within a sample and does not need to be within cell types. 
+Finally, using information defined from short read illumina sequencing, you can identify differentially used transcripts across cell types. 
+Here, we integrate across samples and across cell types in order to identify key transcripts that are differentially spliced between mutant and wild type cells in various cell types. 
+Permutations happen within each sample and within each cell type. 
+The output table contains a combined table with weighted odds ratio for each junction found in each cell type with one p-value being reported for the likelihood that junction is significantly differentially used in each cell type. 
+This can also be applied to clusters within a sample and does not need to be within cell types. 
 
 To run individual patient within each cell type, run the following: 
-```
-Rscript split_clusters_combined_patient.R <path/to/folder/with/counts> <path/to/folder/with/genotype> <path/to/combined/metadata> <path/to/output> <patient.names> <pattern/unique identifiers on cell barcodes>
 
-Rscript split_JuncPermute_ind_patient_mut_wt_all_celltypes.R <path/to/split/files> <path/to/genotype> <number of permutations> <path/to/output> <output file name>
+```
+Rscript split_JuncPermute_ind_patient_mut_wt_all_celltypes.R \
+  <path to split files> \
+  <path to genotype> \
+  <number of permutations> \
+  <path to output> \
+  <output file name>
+
+Rscript merge_ind_celltype_output.R \
+  <path to split output dir> \
+  <path to metadata> \
+  <path to genotype file> \
+  <path to final output>
 ```
 
 To run combined patient within each cell type, run the following: 
+
 ```
-Rscript JuncPermute_LogOR_combined_patient_celltype.R <path/to/counts> <path/to/genotype> <path/to/metadata> <number of permutations> <path/to/output>
+Rscript JuncPermute_LogOR_combined_patient_celltype.R \
+  <path to counts> \
+  <path to genotype> \
+  <path to metadata> \
+  <number of permutations> \
+  <path to output>
+
+Rscript merge_final_output_comb_patient_merge_counts.R \
+  <path to split output dir> \
+  <path to metadata> \
+  <path to final output>
+
 ```
 
 ## Running the full GoT-Splice pipeline
 
-To run as one combined pipeline on slurm cluster, use splice_pipeline.sh. 
+To run as one combined pipeline on slurm cluster, use `splice_pipeline.sh`. 
 
 ```
 sbatch splice_pipeline.sh \
@@ -200,7 +295,8 @@ sbatch splice_pipeline.sh \
 ```
 
 :warning: This is only set up to run on a slurm HPC. 
-It also assumes queue names of `pe2` and `bigmem`. If other queue names are used by your HPC those should be changed before running the workflow. 
+It also assumes queue names of `pe2` and `bigmem`. 
+If other queue names are used by your HPC those should be changed before running the workflow. 
 
 This also relies on loading modules with the following commands: 
 
