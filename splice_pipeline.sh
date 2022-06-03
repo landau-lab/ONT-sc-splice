@@ -446,12 +446,13 @@ junc_calling=($(sbatch --dependency=singleton --job-name="$sample_name" "$script
 ## step 6: Differential transcript usage (with permutations within cell types)
 
 diff_transcript=($(sbatch --dependency=singleton --job-name="$sample_name" "$scripts_dir"/diff_transcript_usage/diff_transcript_pipeline.sh \
-  "$output_dir"/output_files \
-  $run_files \
-  "$output_dir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_all.introns.info.w.primary.annotations.txt \
-  "$output_dir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_perind_numbers.counts.txt  \
-  $genotype_info \
-  $pattern \
-  $sample_name \
-  $nperm))
+  --output_dir "$output_dir"/output_files \
+  --scripts_dir $scripts_dir/diff_transcript_usage \
+  --metadata "$output_dir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_all.introns.info.w.primary.annotations.txt \
+  --counts "$output_dir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_perind_numbers.counts.txt  \
+  --genotype_info $genotype_info \
+  --pattern $pattern \
+  --sample_name $sample_name \
+  --nperm $nperm \
+  --min_reads $min_reads))
 '
