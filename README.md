@@ -84,9 +84,9 @@ Rscript junc_calling_script.R \
 ```
 Final ouptput: Counts matrix with each row as a junction and each column as a cell, metadata containing junction information, including gene, transcript ID, and chromosomal location. 
 
-### Annotation of Intron Junctions
+### Annotation of Junctions
 
-Annotation of intron junctions identified in sample. 
+Annotation of junctions identified in sample. 
 Here the reference gtf is used to classify each 5' and 3' end of the intron. 
 Output will add on additional columns to the metadata table including startClass and endClass, classifying the junction ends as the canonical (main) or alternative (not_main_3_prime/not_main_5_prime) end. 
 Events will also be classified as exon skipping events or alternative splicing events. 
@@ -143,7 +143,7 @@ Rscript strand_adjustment.R \
   <path/to/output>
 ```
 
-#### Option A: Individual Patient
+#### Option A: Individual Samples
 
 2. Run Differential transcript usage analysis. 
 This requires the strand adjusted metadata matrix, full counts matrix from intron junction calling, and a table with cell barcodes, genotype information, and cell type assignment (produced from short read data analysis using GoT). 
