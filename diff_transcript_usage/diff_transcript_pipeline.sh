@@ -9,15 +9,29 @@ module load R/3.6.0
 
 ### arguments input for this file
 
-workdir=$1
-run_files=$2
-metadata=$3
-counts=$4
-genotype=$5
-pattern=$6
-sample_name=$7
-nperm=$8
+# output_dir
+# scripts_dir
+# metadata
+# counts
+# genotype_info
+# pattern
+# sample_name
+# nperm
+# min_reads
 
+# set defaults 
+scripts_dir="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/ONT_Splice_Pipeline/diff_transcript_usage"
+nperm=100000
+min_reads=5
+
+# grab arguments from command line
+while [ $# -gt 0 ]; do
+    if [[ $1 == *'--'* ]]; then
+        v="${1/--/}"
+        declare $v="$2"
+    fi
+    shift
+done
 
 ###############################################################
 ######## Step 1: Run Strand Adjustment of Metadata ############
@@ -29,10 +43,12 @@ nperm=$8
 
 ###############################################################
 
-cd $workdir 
+cd $output_dir 
 mkdir strand_adjusted_metadata
 
-Rscript "$run_files"/bin/strand_adjustment.R $metadata "$workdir"/strand_adjusted_metadata
+Rscript "$scripts_dir"/bin/strand_adjustment.R \
+  $metadata \
+  "$output_dir"/strand_adjusted_metadata
 
 ##############################################################
 ######### Step 2: Split clusters for differential transcript usage
@@ -63,7 +79,13 @@ mkdir split_"$i"/five_prime/counts_files
 mkdir split_"$i"/five_prime/data_tables
 done
 
-Rscript "$run_files"/bin/split_clusters_v2.R $counts $genotype "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv $pattern "$workdir"/diff_transcript_output/split_cluster_files
+Rscript "$scripts_dir"/bin/split_clusters_v2.R \
+  --counts $counts \
+  --genotype_file $genotype \
+  --metadata "$output_dir"/strand_adjusted_metadata/strand_adjusted_metadata.csv \
+  --pattern $pattern \
+  --min_reads $min_reads \
+  --output_dir "$output_dir"/diff_transcript_output/split_cluster_files
 
 ###########################################################
 ######## Step 3: Batch submit each split cluster for differential analysis
@@ -86,21 +108,31 @@ mkdir logs
 
 permute_jobids=()
 for i in {1..1000}; do
-permute_jobids+=($(sbatch --job-name="$sample_name" "$run_files"/bin/run_split_perm_within_celltype_5p_3p.sh "$workdir"/diff_transcript_output/split_cluster_files/split_"$i" $genotype $nperm $pattern "$workdir"/diff_transcript_output/split_cluster_output output_"$i" "$run_files"/bin))
+permute_jobids+=($(sbatch --job-name="$sample_name" "$scripts_dir"/bin/run_split_perm_within_celltype_5p_3p.sh \
+  "$output_dir"/diff_transcript_output/split_cluster_files/split_"$i" \
+  $genotype \
+  $nperm \
+  $pattern \
+  "$output_dir"/diff_transcript_output/split_cluster_output output_"$i" \
+  "$scripts_dir"/bin))
 done 
 
 ###########################################################
 ####### Step 4: Merge final output into one file and merge with all annotation information 
-### Input: run_files path 
+### Input: scripts_dir path 
 ### Input: outputs directory where all files are stored
 ### Input: strand adjusted metadata 
 ### Input: Final outfile 
 
 mkdir merge_final_output
 
-#sbatch "$run_files"/bin/run_merge_output.sh "$run_files"/bin "$workdir"/diff_transcript_output/split_cluster_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv "$workdir"/diff_transcript_output/merge_final_output
+#sbatch "$scripts_dir"/bin/run_merge_output.sh "$scripts_dir"/bin "$output_dir"/diff_transcript_output/split_cluster_output "$output_dir"/strand_adjusted_metadata/strand_adjusted_metadata.csv "$output_dir"/diff_transcript_output/merge_final_output
 
-merge=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/bin/run_merge_output.sh "$run_files"/bin "$workdir"/diff_transcript_output/split_cluster_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv "$workdir"/diff_transcript_output/merge_final_output))
+merge=($(sbatch --dependency=singleton --job-name="$sample_name" "$scripts_dir"/bin/run_merge_output.sh \
+  "$scripts_dir"/bin \
+  "$output_dir"/diff_transcript_output/split_cluster_output \
+  "$output_dir"/strand_adjusted_metadata/strand_adjusted_metadata.csv \
+  "$output_dir"/diff_transcript_output/merge_final_output))
 
 ##########################################################
 ####### Step 5: Run DTU for all cell types 
@@ -122,12 +154,19 @@ mkdir split_cluster_celltype_output/alt_five_prime
 
 permute_celltypes_jobids=()
 for i in {1..1000}; do
-permute_celltypes_jobids+=($(sbatch --job-name="$sample_name" "$run_files"/bin/submit_split_celltype.sh "$workdir"/diff_transcript_output/split_cluster_files/split_"$i" $genotype $nperm $pattern "$workdir"/diff_transcript_output/split_cluster_celltype_output output_"$i" "$run_files"/bin))
+permute_celltypes_jobids+=($(sbatch --job-name="$sample_name" "$scripts_dir"/bin/submit_split_celltype.sh \
+  "$output_dir"/diff_transcript_output/split_cluster_files/split_"$i" \
+  $genotype \
+  $nperm \
+  $pattern \
+  "$output_dir"/diff_transcript_output/split_cluster_celltype_output \
+  output_"$i" \
+  "$scripts_dir"/bin))
 done
 
 ##########################################################
 ##### Step 6: Merge output from DTU from cell types 
-### input: run_files path 
+### input: scripts_dir path 
 ### input: outputs directory where all files are stored
 ### input: strand adjusted metadata
 ### input: genotype 
@@ -135,7 +174,12 @@ done
 
 mkdir merge_final_celltype_output
 
-merge_celltype=($(sbatch --dependency=singleton --job-name="$sample_name" "$run_files"/bin/run_merge_celltype_output.sh "$run_files"/bin "$workdir"/diff_transcript_output/split_cluster_celltype_output "$workdir"/strand_adjusted_metadata/strand_adjusted_metadata.csv $genotype "$workdir"/diff_transcript_output/merge_final_celltype_output))
+merge_celltype=($(sbatch --dependency=singleton --job-name="$sample_name" "$scripts_dir"/bin/run_merge_celltype_output.sh \
+  "$scripts_dir"/bin \
+  "$output_dir"/diff_transcript_output/split_cluster_celltype_output \
+  "$output_dir"/strand_adjusted_metadata/strand_adjusted_metadata.csv \
+  $genotype \
+  "$output_dir"/diff_transcript_output/merge_final_celltype_output))
 
 echo "Done" 
 

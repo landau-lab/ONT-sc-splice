@@ -3,13 +3,53 @@ library(Matrix)
 library(parallel)
 library(tidyverse)
 library(matrixStats)
+library(optparse)
+
+# Set up optparse options
+option_list <- list(
+  make_option(
+    opt_str = c("-c", "--counts"),
+    type = "character",
+    help = "path to counts matrix"
+  ),
+  make_option(
+    opt_str = c("-g", "--genotype_file"),
+    type = "character",
+    help = "path to genotype tsv"
+  ),
+  make_option(
+    opt_str = c("-d", "--metadata"),
+    type = "character",
+    help = "path to metadata tsv"
+  ),
+  make_option(
+    opt_str = c("-p", "--pattern"),
+    type = "character",
+    help = "pattern used to identify cells in integrated data (ie. _1, _2)"
+  ),
+  make_option(
+    opt_str = c("-r", "--min_reads"),
+    type = "double",
+    default = 5,
+    help = "number of minimum reads for splice junction to cover"
+  ),
+  make_option(
+    opt_str = c("-o", "--output_dir"),
+    type = "character",
+    help = "path to output directory"
+  )
+)
+
+# Parse options
+opt <- parse_args(OptionParser(option_list = option_list))
 
 args = commandArgs(TRUE)
-path.to.matrix = args[1]
-path.to.genotype = args[2]
-path.to.metadata = args[3]
-pattern = args[4]
-output.dir = args[5]
+path.to.matrix = opt$counts
+path.to.genotype = opt$genotype_file
+path.to.metadata = opt$metadata
+pattern = opt$pattern
+min_reads = opt$min_reads
+output.dir = opt$output_dir
 
 
 # # Test data
@@ -61,7 +101,7 @@ data = intron_junction
 data$obs.wt = rowSums(mtx[,colnames(mtx) %in% wt])
 data$obs.mut = rowSums(mtx[,colnames(mtx) %in% mut])
 data$total.reads.per.junction = data$obs.wt+data$obs.mut
-data = data[which(data$total.reads.per.junction >= 5),]
+data = data[which(data$total.reads.per.junction >= min_reads),]
 
 #get list of unique clusters with n > 1
 alt.three.clusters = data %>% group_by(five_prime_ID) %>% tally()
