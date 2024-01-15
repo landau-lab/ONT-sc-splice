@@ -4,7 +4,7 @@
 #SBATCH --partition=bigmem,pe2
 #SBATCH --cpus-per-task=10
 
-module load R/3.6.0
+#module load R/3.6.0
 
 
 ### arguments input for this file
@@ -64,7 +64,7 @@ Rscript "$diff_usage_scripts_dir"/bin/create_combined_metadata.R \
 mkdir split_cluster_files
 cd ./split_cluster_files
 
-for i in {1..1000}
+for i in {1..10}
 do 
 mkdir split_"$i"
 mkdir split_"$i"/three_prime
@@ -104,7 +104,7 @@ mkdir split_cluster_output/alt_five_prime
 mkdir logs
 
 permute_jobids=()
-for i in {1..500}; do
+for i in {1..10}; do
 permute_jobids+=($(sbatch --job-name="$sample_name" "$diff_usage_scripts_dir"/bin/run_permute_merge_counts.sh "$workdir"/diff_transcript_combined_merge_counts/split_cluster_files/split_"$i" $genotype $nperm $patients "$workdir"/diff_transcript_combined_merge_counts/split_cluster_output output_"$i" "$diff_usage_scripts_dir"/bin))
 done 
 

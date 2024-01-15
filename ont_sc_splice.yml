@@ -1,0 +1,24 @@
+name: ont_sc_splice
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python >= 3.5.1
+  - spoa
+  - racon
+  - minimap2
+  - samtools
+  - r-tidyverse
+  - r-matrix
+  - r-data.table
+  - r-bigreadr
+  - bioconductor-biocparallel
+  - r-optparse
+  - r-forcats
+  - pysam
+  - pip:
+    - argparse
+    - numpy
+    - pandas
+
+

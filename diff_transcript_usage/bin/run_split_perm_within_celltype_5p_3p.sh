@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --output=logs/stdout_%j.log 
 
-module load R/3.6.0
+#module load R/3.6.0
 
 splitdir=$1
 genotype=$2
@@ -20,6 +20,6 @@ Rscript "$runfiles"/split_JuncPermute_LogOR_perm_within_celltype_5p_3p.r \
   --split $splitdir \
   --genotype_file $genotype \
   --num_perm $nperm \
-  --patern $pattern \
+  --pattern $pattern \
   --output_dir $outputdir \
   --output_file $outputfile

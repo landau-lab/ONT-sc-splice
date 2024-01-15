@@ -10,5 +10,5 @@ threedata=$1
 fivedata=$2
 output=$3
 
-Rscript /gpfs/commons/groups/landau_lab/SF3B1_splice_project/ONT_Splice_Pipeline/bin/DTU_junction_annotation.R $threedata $fivedata $output
+Rscript /gpfs/commons/groups/landau_lab/mariela/tools/ONT-sc-splice/bin/DTU_junction_annotation.R $threedata $fivedata $output
 

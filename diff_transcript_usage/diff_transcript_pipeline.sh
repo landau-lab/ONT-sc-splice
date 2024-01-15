@@ -1,10 +1,8 @@
 #!/bin/bash
+#SBATCH --mem=80g
+#SBATCH --partition=pe2
 
-#SBATCH --mem=100g
-#SBATCH --partition=bigmem,pe2
-#SBATCH --cpus-per-task=10
-
-module load R/3.6.0
+#module load R/3.6.0
 
 
 ### arguments input for this file
@@ -20,7 +18,7 @@ module load R/3.6.0
 # min_reads
 
 # set defaults 
-scripts_dir="/gpfs/commons/groups/landau_lab/SF3B1_splice_project/ONT_Splice_Pipeline/diff_transcript_usage"
+#scripts_dir="/gpfs/commons/groups/landau_lab/mariela/tools/ONT-sc-splice/diff_transcript_usage"
 nperm=100000
 min_reads=5
 
@@ -29,6 +27,7 @@ while [ $# -gt 0 ]; do
     if [[ $1 == *'--'* ]]; then
         v="${1/--/}"
         declare $v="$2"
+        echo "${v}: ${2}" 
     fi
     shift
 done
@@ -44,7 +43,7 @@ done
 ###############################################################
 
 cd $output_dir 
-mkdir strand_adjusted_metadata
+mkdir -p strand_adjusted_metadata
 
 Rscript "$scripts_dir"/bin/strand_adjustment.R \
   $metadata \
@@ -62,13 +61,13 @@ Rscript "$scripts_dir"/bin/strand_adjustment.R \
 
 ###############################################################
 
-mkdir diff_transcript_output
+mkdir -p diff_transcript_output
 cd ./diff_transcript_output
 
 mkdir split_cluster_files
 cd ./split_cluster_files
 
-for i in {1..1000}
+for i in {1..10}
 do 
 mkdir split_"$i"
 mkdir split_"$i"/three_prime
@@ -81,7 +80,7 @@ done
 
 Rscript "$scripts_dir"/bin/split_clusters_v2.R \
   --counts $counts \
-  --genotype_file $genotype \
+  --genotype_file $genotype_info \
   --metadata "$output_dir"/strand_adjusted_metadata/strand_adjusted_metadata.csv \
   --pattern $pattern \
   --min_reads $min_reads \
@@ -107,10 +106,10 @@ mkdir split_cluster_output/alt_five_prime
 mkdir logs
 
 permute_jobids=()
-for i in {1..1000}; do
+for i in {1..10}; do
 permute_jobids+=($(sbatch --job-name="$sample_name" "$scripts_dir"/bin/run_split_perm_within_celltype_5p_3p.sh \
   "$output_dir"/diff_transcript_output/split_cluster_files/split_"$i" \
-  $genotype \
+  ${genotype_info} \
   $nperm \
   $pattern \
   "$output_dir"/diff_transcript_output/split_cluster_output \
@@ -125,7 +124,7 @@ done
 ### Input: strand adjusted metadata 
 ### Input: Final outfile 
 
-mkdir merge_final_output
+mkdir -p merge_final_output
 
 #sbatch "$scripts_dir"/bin/run_merge_output.sh "$scripts_dir"/bin "$output_dir"/diff_transcript_output/split_cluster_output "$output_dir"/strand_adjusted_metadata/strand_adjusted_metadata.csv "$output_dir"/diff_transcript_output/merge_final_output
 
@@ -149,15 +148,15 @@ merge=($(sbatch --dependency=singleton --job-name="$sample_name" "$scripts_dir"/
 
 ###########################################################
 
-mkdir split_cluster_celltype_output
-mkdir split_cluster_celltype_output/alt_three_prime
-mkdir split_cluster_celltype_output/alt_five_prime
+mkdir -p split_cluster_celltype_output
+mkdir -p split_cluster_celltype_output/alt_three_prime
+mkdir -p split_cluster_celltype_output/alt_five_prime
 
 permute_celltypes_jobids=()
-for i in {1..1000}; do
+for i in {1..10}; do
 permute_celltypes_jobids+=($(sbatch --job-name="$sample_name" "$scripts_dir"/bin/submit_split_celltype.sh \
   "$output_dir"/diff_transcript_output/split_cluster_files/split_"$i" \
-  $genotype \
+  $genotype_info \
   $nperm \
   $pattern \
   "$output_dir"/diff_transcript_output/split_cluster_celltype_output \
@@ -179,7 +178,7 @@ merge_celltype=($(sbatch --dependency=singleton --job-name="$sample_name" "$scri
   "$scripts_dir"/bin \
   "$output_dir"/diff_transcript_output/split_cluster_celltype_output \
   "$output_dir"/strand_adjusted_metadata/strand_adjusted_metadata.csv \
-  $genotype \
+  $genotype_info \
   "$output_dir"/diff_transcript_output/merge_final_celltype_output))
 
 echo "Done" 

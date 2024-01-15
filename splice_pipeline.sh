@@ -21,7 +21,8 @@
 # sample_name : Name of sample being processed 
 # scripts_dir : Path to where the GoT ONT pipeline scripts are stored 
 # genotype_info : Table with genotype calls for each cell. 
-# pattern : 
+# pattern : final characters from a barcode to trim, example if the barcode is 
+#    AGGGCTACAGTTG_2, the pattern is "_2"
 # output_dir : Where to store all output files  
 # nperm : Number of permutations to perform for permutation testing. Default is 100000. 
 # min_reads : Minimum number of reads a junction must have across all cells to be 
@@ -448,11 +449,10 @@ junc_calling=($(sbatch --dependency=singleton --job-name="$sample_name" "$script
 diff_transcript=($(sbatch --dependency=singleton --job-name="$sample_name" "$scripts_dir"/diff_transcript_usage/diff_transcript_pipeline.sh \
   --output_dir "$output_dir"/output_files \
   --scripts_dir $scripts_dir/diff_transcript_usage \
-  --metadata "$output_dir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_all.introns.info.w.primary.annotations.txt \
+  --metadata "$output_dir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_all.introns.info.w.primaryAnnotations.exonSkipping.txt \
   --counts "$output_dir"/output_files/leafcutter_outputs/"$sample_name"_output/"$sample_name"_perind_numbers.counts.txt  \
   --genotype_info $genotype_info \
-  --pattern $pattern \
+  --pattern "_2" \
   --sample_name $sample_name \
   --nperm $nperm \
   --min_reads $min_reads))
-'

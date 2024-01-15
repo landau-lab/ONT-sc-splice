@@ -6,7 +6,7 @@
 
 
 
-module load R/3.6.0
+#module load R/3.6.0
 
 splitfiles=$1
 genotype=$2

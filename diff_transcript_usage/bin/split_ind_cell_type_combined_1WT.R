@@ -180,8 +180,8 @@ message("data filtered")
 
 
 setwd(output.dir)
-split_clusters_three = chunk(alt.clust.three, 100)
-split_clusters_five = chunk(alt.clust.five, 100)
+split_clusters_three = chunk(alt.clust.three, 10)
+split_clusters_five = chunk(alt.clust.five, 10)
 message("clusters split")
 
 

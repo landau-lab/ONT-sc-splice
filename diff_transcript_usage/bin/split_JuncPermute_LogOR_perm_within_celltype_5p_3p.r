@@ -16,7 +16,7 @@ option_list <- list(
   make_option(
     opt_str = c("-n", "--num_perm"),
     type = "integer",
-    default - 100000,
+    default = 100000,
     help = "Number of permutations to perform"
   ),
   make_option(

@@ -307,3 +307,8 @@ module load samtools
 module load racon
 ```
 These lines should either be changed or commented out before running and modules should be load in the correct format for your HPC. 
+
+## Updated version
+To facilitate the software requiriments we have included a yml file that allows for the creation of a conda environment containing the required software. 
+
+Additionally, we provide a small example located in the [minimal_example](minimal_example) folder 

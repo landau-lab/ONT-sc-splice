@@ -124,8 +124,8 @@ message("Data filtered")
 
 setwd(output.dir)
 
-split_clusters_three = chunk(final.alt.three.clust, 1000)
-split_clusters_five = chunk(final.alt.five.clust, 1000)
+split_clusters_three = chunk(final.alt.three.clust, 10)
+split_clusters_five = chunk(final.alt.five.clust, 10)
 
 for (i in 1:length(split_clusters_three)) {
   data.split = data.filt.three[which(data.filt.three$five_prime_ID %in% split_clusters_three[[i]]),]
