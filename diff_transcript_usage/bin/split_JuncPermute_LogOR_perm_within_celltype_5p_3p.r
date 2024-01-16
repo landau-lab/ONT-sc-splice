@@ -44,8 +44,8 @@ path.to.split = opt$split
 path.to.genotype = opt$genotype_file
 nperm = opt$num_perm
 pattern=opt$pattern
-output.dir = opt$output_file
-output.file = opt$output_dir 
+output.dir = opt$output_dir
+output.file = opt$output_file
 
 nperm = as.numeric(nperm)
 

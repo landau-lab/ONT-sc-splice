@@ -308,7 +308,28 @@ module load racon
 ```
 These lines should either be changed or commented out before running and modules should be load in the correct format for your HPC. 
 
-## Updated version
-To facilitate the software requiriments we have included a yml file that allows for the creation of a conda environment containing the required software. 
+## Updated version - 2024
 
-Additionally, we provide a small example located in the [minimal_example](minimal_example) folder 
+To facilitate testing the software, we have included the [ont_sc_splice.yml](ont_sc_splice.yml).yml file that allows for the creation of a conda environment containing the required software. This can be done by using the following command: 
+
+```
+conda env create -f ont_sc_splice.yml 
+```
+
+Additionally, we provide a small example of the splicing-analysis part of the pipeline located in the [minimal_example](minimal_example) folder. This assumes that the files have been processed through SiCeLoRe. The pipeline then can be invoked by running the `splicing_pipeline_after_sicelore.sh` and requires as input a folder with the following structure: 
+
+```
+.
+└── output_files
+    ├── sicelore_outputs
+        ├── <unique sample identifier>_consensus.sorted.tags.GE.bam
+        └── <unique sample identifier>_consensus.sorted.tags.GE.bam.bai
+
+```
+
+As well as the genotype annotated file which should contain: 
+
+  - the genotype column named `Genotype_1UMI`
+  - the `Cell.Assignment` colum with the defined cell types
+  - the cell barcodes as row names
+
