@@ -310,7 +310,7 @@ These lines should either be changed or commented out before running and modules
 
 ## Updated version - 2024
 
-To facilitate testing the software, we have included the [ont_sc_splice.yml](ont_sc_splice.yml).yml file that allows for the creation of a conda environment containing the required software. This can be done by using the following command: 
+To facilitate testing the software, we have included the [ont_sc_splice.yml](ont_sc_splice.yml) file that allows for the creation of a conda environment containing the required software. This can be done by using the following command: 
 
 ```
 conda env create -f ont_sc_splice.yml 
